@@ -27,5 +27,6 @@ const notEmpty = obj => obj && Object.keys(obj).length > 0
 module.exports = {
   mkdirsSync,
   notEmpty,
+  log,
   conc
 }

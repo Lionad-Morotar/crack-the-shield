@@ -8,7 +8,10 @@ const outputDir = path.join(__dirname, `${sep}dist${sep}`)
 const tasks = require('./task.js')
 const scrape = require('./src/scrape')
 
-conc(1, tasks, task => {
+const concurrent = 1
+conc(concurrent, tasks, main)
+
+async function main (task) {
   const {
     name,
     url,
@@ -32,4 +35,4 @@ conc(1, tasks, task => {
   }
 
   log(`[DONE]：${name}`)
-})
+}

@@ -8,7 +8,7 @@ const path = require('path')
 const puppeteer = require('puppeteer-extra')
 const StealthPlugin = require('puppeteer-extra-plugin-stealth')
 
-const { notEmpty } = require('./utils')
+const { notEmpty } = require('../utils')
 
 puppeteer.use(StealthPlugin())
 
