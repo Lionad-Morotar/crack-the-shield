@@ -1,5 +1,6 @@
 const fs = require('fs')
 const path = require('path')
+const rimraf = require('rimraf').sync
 const conc = require('../plugins/conc')
 
 const isProd = process.env.NODE_ENV === 'production'
@@ -25,6 +26,7 @@ const log = msg => {
 const notEmpty = obj => obj && Object.keys(obj).length > 0
 
 module.exports = {
+  rimraf,
   mkdirsSync,
   notEmpty,
   log,

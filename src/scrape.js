@@ -8,7 +8,6 @@ module.exports = async function (options) {
       new PuppeteerPlugin({
         launchOptions: {
           headless: false,
-          headless: true,
           ignoreHTTPSErrors: true,
           args: [
             '--start-maximized'

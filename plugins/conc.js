@@ -1,4 +1,5 @@
 async function conc(limit, tasks, exec) {
+  tasks = tasks instanceof Array ? tasks : [tasks]
   const ret = []
   const executing = []
   for (const task of tasks) {
