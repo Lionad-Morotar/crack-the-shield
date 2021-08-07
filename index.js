@@ -54,5 +54,5 @@ async function main (task) {
     throw new Error(error)
   }
 
-  log(`[DONE]：${name}`)
+  log(`[DONE] 任务完成：${name}`)
 }
