@@ -57,7 +57,7 @@ class PuppeteerPlugin {
         await page.evaluateOnNewDocument(preloadFile)
 
         await page.goto(url, { waitUntil: 'domcontentloaded' })
-        await page.waitForTimeout(3000)
+        await page.waitForTimeout(30000)
 
         if (this.scrollToBottom) {
           await scrollToBottom(page, this.scrollToBottom.timeout, this.scrollToBottom.viewportN)

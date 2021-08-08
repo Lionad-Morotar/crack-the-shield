@@ -1,5 +1,8 @@
 {
-  "name": "_bot",
-  "url": "https://bot.sannysoft.com/",
-  "force": true
+  "concurrent": 1,
+  "tasks": {
+    "name": "_bot",
+    "url": "https://bot.sannysoft.com/",
+    "force": true
+  }
 }

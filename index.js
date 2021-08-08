@@ -5,17 +5,18 @@ const { mkdirsSync, conc, log, rimraf } = require('./utils')
 const sep = path.sep
 const outputDir = path.join(__dirname, `${sep}dist${sep}`)
 
-const tasks = require('./task.js')
-// const bot = require('./tasks/bot.json')
+const mainTasks = require('./tasks/index.json')
+const testBot = require('./tasks/bot.json')
+const testFingerprint = require('./tasks/fingerprint.json')
 const scrape = require('./src/scrape')
-const snapshot = require('./src/snapshot')
+const getSnapshot = require('./src/snapshot')
 
-const quque = tasks
-const concurrent = 1
-conc(concurrent, quque, main)
+const pending = testFingerprint
+const { concurrent = 1, tasks = pending } = pending
+conc(concurrent, tasks, main)
 
 async function main (task) {
-  const { name, url, force = false } = task
+  const { name, url, snapshot = true, force = false } = task
   const saveToDir = path.join(outputDir, name)
 
   /* 抓取站点 */
@@ -41,17 +42,19 @@ async function main (task) {
 
   /* 站点截图 */
 
-  log(`[INFO] 开始截图：${name}`)
-  mkdirsSync(snapshotSaveDir)
-  try {
-    await snapshot({
-      name,
-      url: `file:${sep}${sep}` + path.join(saveToDir, `${sep}index.html`),
-      saveTo: path.join(saveToDir, `${sep}snapshot`)
-    })
-  } catch (error) {
-    console.error(error)
-    throw new Error(error)
+  if (snapshot) {
+    log(`[INFO] 开始截图：${name}`)
+    mkdirsSync(snapshotSaveDir)
+    try {
+      await getSnapshot({
+        name,
+        url: `file:${sep}${sep}` + path.join(saveToDir, `${sep}index.html`),
+        saveTo: path.join(saveToDir, `${sep}snapshot`)
+      })
+    } catch (error) {
+      console.error(error)
+      throw new Error(error)
+    }
   }
 
   log(`[DONE] 任务完成：${name}`)
