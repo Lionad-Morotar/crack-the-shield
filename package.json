@@ -4,7 +4,7 @@
   "description": "crack-the-shield",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon index.js",
+    "start": "node index.js",
     "start:prod": "todo"
   },
   "author": "Lionad",

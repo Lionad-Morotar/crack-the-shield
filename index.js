@@ -11,7 +11,7 @@ const testFingerprint = require('./tasks/fingerprint.json')
 const scrape = require('./src/scrape')
 const getSnapshot = require('./src/snapshot')
 
-const pending = testFingerprint
+const pending = mainTasks
 const { concurrent = 1, tasks = pending } = pending
 conc(concurrent, tasks, main)
 
