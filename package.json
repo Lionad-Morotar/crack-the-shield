@@ -4,7 +4,8 @@
   "description": "crack-the-shield",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
+    "download": "node ./command/download.js",
+    "open": "node ./command/open.js",
     "start:prod": "todo"
   },
   "author": "Lionad",
