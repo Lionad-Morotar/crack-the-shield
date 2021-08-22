@@ -3,6 +3,7 @@ const puppeteer = require('puppeteer-extra')
 const StealthPlugin = require('puppeteer-extra-plugin-stealth')
 const { log } = require('../utils')
 
+// 逃离无头浏览器检测
 puppeteer.use(StealthPlugin())
 
 const MAX = 1
