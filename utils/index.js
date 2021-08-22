@@ -16,10 +16,10 @@ function mkdirsSync(dirname) {
   }
 }
 
-const log = msg => {
+const log = (...msgs) => {
   // TODO log to file
   if (!isProd) {
-    console.log(msg)
+    console.log(msgs)
   }
 }
 
