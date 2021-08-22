@@ -1,0 +1,77 @@
+html, body {
+  height: 0;
+}
+
+@-moz-document url-prefix() {
+  html, body {
+    height: auto;
+  }
+}
+
+body {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  width: 500px;
+}
+
+.content {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
+.content table {
+  width: 100%;
+  margin: auto;
+  border-spacing: 0;
+}
+
+.content > table {
+  border-spacing: 0 10px;
+  border-bottom: solid 1px rgba(0,0,0,0.1);
+}
+
+.content table tr td {
+  color: #555;
+  font-size: 12px;
+  font-family: arial,sans-serif;
+}
+
+.content .logo {
+  height: 110px;
+  background: url("../icons/128.png") no-repeat center center;
+  background-size: 64px;
+}
+
+.content .name {
+  color: #888;
+  user-select: none;
+  text-align: center;
+}
+
+.content .icon {
+  width: 32px;
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+  text-align: center;
+  font-family: monospace;
+}
+
+.content .buttons {
+  height: 150px;
+  border-left: solid 1px rgba(0,0,0,0.1);
+}
+
+.content .button {
+  padding: 0 5px;
+  cursor: pointer;
+  user-select: none;
+  transition: 300ms ease all;
+}
+
+.content .button:hover {
+  background-color: rgba(0,0,0,0.1);
+}

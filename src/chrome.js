@@ -6,6 +6,9 @@ const { log } = require('../utils')
 // 逃离无头浏览器检测
 puppeteer.use(StealthPlugin())
 
+// 逃离指纹检测
+antiCanvasFPExtPath = path.join(__dirname, '../extension/anti-canvas-fp')
+
 const MAX = 1
 const DEBUG_POINT_POOL = []
 
@@ -20,11 +23,12 @@ const createInstance = async () => {
       args: [
         '--single-process',
         '--disable-gpu',
-        '--disable-extension',
+        // '--disable-extension',
         '--no-vr-runtime',
         '--no-sandbox',
         '--no-zygote',
-        `--user-data-dir="D:/@Github/crack-the-shield/cache/chrome"`
+        `--disable-extensions-except=${antiCanvasFPExtPath}`,
+        `--load-extension=${antiCanvasFPExtPath}`
       ]
     })
     debugPort = await browser.wsEndpoint()

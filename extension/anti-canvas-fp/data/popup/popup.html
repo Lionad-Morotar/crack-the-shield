@@ -1,0 +1,33 @@
+<!DOCTYPE html PUBLIC "-//IETF//DTD HTML 2.0//EN">
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="popup.css">
+    <link rel="stylesheet" type="text/css" href="explore/explore.css">
+  </head>
+  <body>
+    <div class="content">
+      <table>
+        <tr>
+          <td style="width: 45%">
+            <table>
+              <tr><td class="logo"></td></tr>
+              <tr><td class="name"></td></tr>
+            </table>
+          </td>
+          <td>
+            <table class="buttons">
+              <tr><td class="icon fingerprint">?</td><td class="button" id="fingerprint">What is my Fingerprint</td></tr>
+              <tr><td class="icon notifications">☑</td><td class="button" id="notifications">Show|Hide Desktop notifications</td></tr>
+              <tr><td class="icon support">!</td><td class="button" id="support">Open support page</td></tr>
+              <tr><td class="icon donation">♡</td><td class="button" id="donation">Make a donation</td></tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </div>
+    <div id="explore"></div>
+    <script async src="explore/explore.js"></script>
+    <script type="text/javascript" src="popup.js"></script>
+  </body>
+</html>

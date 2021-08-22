@@ -1,0 +1,38 @@
+{
+   "background": {
+      "page": "lib/chrome/background.html"
+   },
+   "browser_action": {
+      "default_icon": {
+         "16": "data/icons/16.png",
+         "32": "data/icons/32.png",
+         "48": "data/icons/48.png",
+         "64": "data/icons/64.png"
+      },
+      "default_popup": "data/popup/popup.html",
+      "default_title": "Canvas Fingerprint Defender"
+   },
+   "content_scripts": [ {
+      "all_frames": true,
+      "js": [ "data/content_script/inject.js" ],
+      "match_about_blank": true,
+      "matches": [ "*://*/*" ],
+      "run_at": "document_start"
+   } ],
+   "description": "Defending against canvas fingerprinting by reporting a fake value.",
+   "homepage_url": "https://mybrowseraddon.com/canvas-defender.html",
+   "icons": {
+      "128": "data/icons/128.png",
+      "16": "data/icons/16.png",
+      "32": "data/icons/32.png",
+      "48": "data/icons/48.png",
+      "64": "data/icons/64.png"
+   },
+   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxFnQOHcUEKRKcJs3cuZXzLGCsPpk1OsIEF2U1lIO8YVHrRXdK4zt1qI2FXjfHrP+jvTIcqb7QzajlPKaLiIz2Cby8CR4WzFLhXDJPkzi+8lkL0Qgw4V36lup8lLpHQ+3cPgSdTgZZyWAT/wlz9dHBJQGrrQxoxnsamVfrEkW1H3CBnDD8K0DyIXaL81L1yXcnK8qfOIjDgGdc7fk/SFfe39w1x2E24bprKeY8aXgiDR7zmUiyOygBMQ5fxG2eeMvnrBnNXZrUm2IFZtn4QTlq01Pf5c2f7S68YL/50Xu2nY8ZiEMsdCre2gS6I/GoNvrB6hyr14Ujp1PFum+oUTHWQIDAQAB",
+   "manifest_version": 2,
+   "name": "Canvas Fingerprint Defender",
+   "permissions": [ "storage", "contextMenus", "notifications" ],
+   "short_name": "canvas-defender",
+   "update_url": "https://clients2.google.com/service/update2/crx",
+   "version": "0.1.9"
+}
