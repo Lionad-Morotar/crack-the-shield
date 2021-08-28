@@ -21,30 +21,43 @@ console.log('url:', url)
     const data = { name: '', hotline: '', mobile: '', owner: '', address: '' }
     // TODO 超时
     await page.goto(url, { waitUntil: 'domcontentloaded' })
-    const documentHandle = await page.evaluateHandle(() => document)
+    const $document = await page.evaluateHandle(() => document)
 
     // 获取标题内容
     data.name = await page.evaluate(
       document => document.querySelector('.company-name').innerText,
-      documentHandle
+      $document
     )
 
     const pageDir = dir('spider-test/', data.name)
     await mkdir(pageDir, true)
 
-    // 我们的地址
-    await page.evaluate(async () => await waitUntilLoaded('#addressText'))
-    const addressTextHandle = await page.evaluateHandle(() => document.querySelector('#addressText'))
+    // 热线
+    await page.evaluate(async () => await waitUntilLoaded('.official-nav-phone-block'))
+    const $hotline = await page.evaluateHandle(() => document.querySelector('.official-nav-phone-block'))
     await page.evaluate(
-      $ele => {
-        $ele.innerText = '！' + $ele.innerText
+      $ele => $ele.setAttribute('style', styles({
+        padding: '20px'
+      })),
+      $hotline
+    )
+    await $hotline.screenshot({
+      path: dir.join(pageDir, 'hotline.png')
+    })
+
+    // 地址
+    await page.evaluate(async () => await waitUntilLoaded('#addressText'))
+    const $address = await page.evaluateHandle(() => document.querySelector('#addressText'))
+    await page.evaluate(
+      $ele => (
+        $ele.innerText = '！' + $ele.innerText,
         $ele.setAttribute('style', styles({
           padding: '20px'
         }))
-      },
-      addressTextHandle
+      ),
+      $address
     )
-    await addressTextHandle.screenshot({
+    await $address.screenshot({
       path: dir.join(pageDir, 'address.png')
     })
 
