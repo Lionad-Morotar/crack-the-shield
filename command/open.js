@@ -18,8 +18,30 @@ console.log('url:', url)
     await page.evaluateOnNewDocument(waitUntilLoaded)
     await page.evaluateOnNewDocument(styles)
 
+    // TODO canvas toString
+
+    /* 移除广告，提高加载速度 */
+    await page.setRequestInterception(true)
+    page.on('request', req => {
+      if (req.url().match(/pexels-photo/)) {
+        req.abort()
+      } else {
+        req.continue()
+      }
+    })
+    await page.evaluateOnNewDocument(() => {
+      document.addEventListener('DOMContentLoaded', () => {
+        const $style = document.createElement('style')
+        $style.innerHTML = `.ad-list { display: none }`
+        console.log(document.querySelector('head'))
+        document.querySelector('head').appendChild($style)
+      })
+    })
+
     const data = { name: '', hotline: '', mobile: '', owner: '', address: '' }
+    
     // TODO 超时
+    // TODO referer
     await page.goto(url, { waitUntil: 'domcontentloaded' })
     const $document = await page.evaluateHandle(() => document)
 
