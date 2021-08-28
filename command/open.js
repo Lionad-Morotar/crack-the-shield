@@ -1,7 +1,8 @@
 const fs = require('fs')
 const path = require('path')
 
-const { waitUntilLoaded } = require('../utils/dom')
+const { dir, mkdir } = require('../utils')
+const { waitUntilLoaded, styles } = require('../utils/dom')
 const { getBrowser, utils } = require('../src/chrome')
 const preloadFile = fs.readFileSync(path.join(__dirname, '../src/preload.js'), 'utf8')
 
@@ -15,12 +16,39 @@ console.log('url:', url)
     await page.setViewport(utils.setViewport())
     await page.evaluateOnNewDocument(preloadFile)
     await page.evaluateOnNewDocument(waitUntilLoaded)
+    await page.evaluateOnNewDocument(styles)
 
+    const data = { name: '', hotline: '', mobile: '', owner: '', address: '' }
+    // TODO 超时
     await page.goto(url, { waitUntil: 'domcontentloaded' })
+    const documentHandle = await page.evaluateHandle(() => document)
 
-    // 等待我们的地址栏加载完毕
-    await page.evaluate(async () => await window.waitUntilLoaded('#addressText'))
+    // 获取标题内容
+    data.name = await page.evaluate(
+      document => document.querySelector('.company-name').innerText,
+      documentHandle
+    )
 
+    const pageDir = dir('spider-test/', data.name)
+    await mkdir(pageDir, true)
+
+    // 我们的地址
+    await page.evaluate(async () => await waitUntilLoaded('#addressText'))
+    const addressTextHandle = await page.evaluateHandle(() => document.querySelector('#addressText'))
+    await page.evaluate(
+      $ele => {
+        $ele.innerText = '！' + $ele.innerText
+        $ele.setAttribute('style', styles({
+          padding: '20px'
+        }))
+      },
+      addressTextHandle
+    )
+    await addressTextHandle.screenshot({
+      path: dir.join(pageDir, 'address.png')
+    })
+
+    await fs.writeFileSync(dir.join(pageDir, 'data.json'), JSON.stringify(data))
 
     // await page.screenshot({ path: 'test.png' })
 

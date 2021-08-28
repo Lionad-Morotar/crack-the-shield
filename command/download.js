@@ -1,6 +1,6 @@
 const fs = require('fs')
 const path = require('path')
-const { mkdirsSync, conc, log, rimraf } = require('../utils')
+const { mkdir, conc, log, rimraf } = require('../utils')
 
 const outputDir = path.join(__dirname, `../dist/`)
 
@@ -49,7 +49,7 @@ async function main (task) {
   if (snapshot) {
     log(`[INFO] 开始截图：${name}`)
     const snapshotSaveDir = path.join(saveToDir, `${sep}snapshot`)
-    mkdirsSync(snapshotSaveDir)
+    mkdir(snapshotSaveDir)
     try {
       await getSnapshot({
         name,

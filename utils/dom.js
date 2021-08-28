@@ -1,3 +1,16 @@
+// 将样式对象转为字符串
+const styles = () => {
+  const fn = obj => Object.entries(obj)
+    .map(([k, v]) => ([k.replace(/([A-Z])/g, (match) => '-' + match.toLowerCase()), v]))
+    .map(x => x.join(':'))
+    .join(';')
+  if (window) {
+    window.styles = fn
+  } else {
+    return fn
+  }
+}
+
 const waitUntilLoaded = function () {
   const fn = ($elm, timeout = 500) => {
     let tick
@@ -42,5 +55,6 @@ const waitUntilLoaded = function () {
 }
 
 module.exports = {
+  styles,
   waitUntilLoaded
 }
