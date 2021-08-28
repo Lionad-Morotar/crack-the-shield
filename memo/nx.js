@@ -63,3 +63,5 @@ attrNames.map(samename => {
 /* 写入文件 */
 
 fs.writeFileSync(dir('memo/statics/loaded.js'), nxContent)
+
+// TODO setTimout
