@@ -2,8 +2,7 @@ const fs = require('fs')
 const path = require('path')
 const { mkdirsSync, conc, log, rimraf } = require('../utils')
 
-const sep = path.sep
-const outputDir = path.join(__dirname, `${sep}dist${sep}`)
+const outputDir = path.join(__dirname, `../dist/`)
 
 const mainTasks = require('../tasks/index.json')
 const testBot = require('../tasks/bot.json')
@@ -33,7 +32,12 @@ async function main (task) {
   try {
     await scrape({
       urls: [url],
-      directory: saveToDir
+      directory: saveToDir,
+      request: {
+        headers: {
+          spider: 'yiguang'
+        }
+      }
     })
   } catch (error) {
     console.error(error)
