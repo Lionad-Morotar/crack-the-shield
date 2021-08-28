@@ -19,6 +19,7 @@ console.log('url:', url)
     await page.evaluateOnNewDocument(styles)
 
     // TODO canvas toString
+    // TODO check load
 
     /* 移除广告，提高加载速度 */
     await page.setRequestInterception(true)
