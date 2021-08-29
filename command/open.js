@@ -34,7 +34,6 @@ console.log('url:', url)
       document.addEventListener('DOMContentLoaded', () => {
         const $style = document.createElement('style')
         $style.innerHTML = `.ad-list { display: none }`
-        console.log(document.querySelector('head'))
         document.querySelector('head').appendChild($style)
       })
     })
@@ -43,6 +42,7 @@ console.log('url:', url)
     
     // TODO 超时
     // TODO referer
+    await page.goto('http://www.baidu.com', { waitUntil: 'domcontentloaded' })
     await page.goto(url, { waitUntil: 'domcontentloaded' })
     const $document = await page.evaluateHandle(() => document)
 
