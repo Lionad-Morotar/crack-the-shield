@@ -36,6 +36,7 @@ console.log('url:', url)
       }
       // 不加载某些外部脚本，提高响应速度
       if (
+        url.match(/script.js/) ||
         url.match(/loaded.js/) ||
         url.match(/socket.io.min.js/)
       ) {
