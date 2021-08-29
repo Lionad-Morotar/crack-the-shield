@@ -11,8 +11,9 @@ const styles = () => {
   }
 }
 
+// 等待元素加载完毕
 const waitUntilLoaded = function () {
-  const fn = ($elm, timeout = 500) => {
+  const fn = ($elm, timeout = 300) => {
     let tick
     const target = typeof $elm === 'string'
       ? document.querySelector($elm)
@@ -54,9 +55,9 @@ const waitUntilLoaded = function () {
   }
 }
 
-// 等待，直到 window 上挂载了某个属性
-const waitUntilJSLoaded = function() {
-  const fn = (name) => {
+// 等待对象上某属性挂载完毕
+const waitUntilPropsLoaded = function() {
+  const fn = (name, objFn) => {
     let tick
     return new Promise((resolve, reject) => {
       const errorTick = setTimeout(() => {
@@ -65,9 +66,14 @@ const waitUntilJSLoaded = function() {
       }, 5 * 1000)
 
       const re = () => setTimeout(() => {
-        if (window[name]) {
+        const targetObj = objFn || window
+        const checkFn = targetObj instanceof Function
+          ? prop => targetObj(prop)
+          : prop => (targetObj.hasOwnProperty(prop), targetObj[prop])
+        const res = checkFn(name)
+        if (res) {
           window.clearTimeout(errorTick)
-          resolve()
+          resolve(res)
         } else {
           tick = re()
         }
@@ -77,7 +83,7 @@ const waitUntilJSLoaded = function() {
     })
   }
   if (window) {
-    window.waitUntilJSLoaded = fn
+    window.waitUntilPropsLoaded = fn
   } else {
     return fn
   }
@@ -86,5 +92,5 @@ const waitUntilJSLoaded = function() {
 module.exports = {
   styles,
   waitUntilLoaded,
-  waitUntilJSLoaded
+  waitUntilPropsLoaded
 }

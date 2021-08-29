@@ -9,7 +9,7 @@ const pool = []
 const quque = []
 const maxLen = 10
 
-const ocr = (base64OrPath, type = 'base64') => {
+const ocr = (base64OrPath, type = 'base64', fn = 'generalBasic') => {
   return new Promise((resolve, reject) => {
     let imgContent
     if (type === 'path') {
@@ -22,11 +22,13 @@ const ocr = (base64OrPath, type = 'base64') => {
       console.log('[INFO] no content in ocr')
       return
     }
-    OCR.generalBasic(imgContent)
+    OCR[fn](imgContent)
       .then(resolve)
       .catch(reject)
   })
 }
+
+ocr.numbers = (...args) => ocr(...args, 'numbers')
 
 // TODO QPS
 const task = (filePath) => {

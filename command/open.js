@@ -3,7 +3,7 @@ const path = require('path')
 
 const ocr = require('../plugins/ocr')
 const { dir, mkdir, sleep, filterSpace } = require('../utils')
-const { waitUntilLoaded, waitUntilJSLoaded, styles } = require('../utils/dom')
+const { waitUntilLoaded, waitUntilPropsLoaded, styles } = require('../utils/dom')
 const { getBrowser, utils } = require('../src/chrome')
 const preloadFile = fs.readFileSync(path.join(__dirname, '../src/preload.js'), 'utf8')
 const socketIOFile = fs.readFileSync(path.join(__dirname, '../statics/socket.io.min.js'), 'utf8')
@@ -18,7 +18,7 @@ console.log('url:', url)
     await page.setViewport(utils.setViewport())
     await page.evaluateOnNewDocument(preloadFile)
     await page.evaluateOnNewDocument(waitUntilLoaded)
-    await page.evaluateOnNewDocument(waitUntilJSLoaded)
+    await page.evaluateOnNewDocument(waitUntilPropsLoaded)
     await page.evaluateOnNewDocument(styles)
 
     // TODO canvas toString
@@ -77,7 +77,7 @@ console.log('url:', url)
     // TODO referer
     // await page.goto('http://www.baidu.com', { waitUntil: 'domcontentloaded' })
     await page.goto(url)
-    await page.evaluate(async () => await waitUntilJSLoaded('io'))
+    await page.evaluate(async () => await waitUntilPropsLoaded('io'))
     const $document = await page.evaluateHandle(() => document)
 
     // 获取 UID
