@@ -9,7 +9,7 @@ module.exports = class Crawler {
     }
     this.todoList = []
     this.doingList = []
-    this.interval = arg.interval
+    this.interval = arg.interval || 0
     this.collection = arg.collection
     this.maxConcurrenceCount = arg.maxConcurrenceCount || 5
     this.force = arg.force || false
@@ -69,7 +69,8 @@ module.exports = class Crawler {
               if (results.length === totalTaskLen) resolve(results)
               this.removeTask(task)
               // 任务间隙休息片刻
-              await new Promise(resolve => setTimeout(resolve, this.interval))
+              const interval = this.interval instanceof Function ? this.interval() : this.interval
+              await new Promise(resolve => setTimeout(resolve, interval))
               // 继续下一个任务
               resolve(await doingBinded())
             })

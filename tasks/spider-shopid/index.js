@@ -4,15 +4,24 @@ const connectDB = require('../../src/connect-db')
 const Crawler = require('../../src/crawler')
 const { getBrowser, utils } = require('../../src/chrome')
 const pageMap = require('./page.json')
-const dbname = process.env.NODE_ENV === 'production'
-  ? 'spider'
-  : 'spider-test'
+
+const isProd = process.env.NODE_ENV === 'production'
+const noCloseForDebug = isProd ? false : true
+const config = isProd
+  ? {
+    dbname: 'spider',
+    baseurl: 'https://spider.test.baixing.cn/'
+  } : {
+    dbname: 'spider-test',
+    baseurl: 'http://192.168.1.7:8080/spider-main/'
+  }
 
 // 初始化浏览器
 const browser = (async () => await getBrowser())()
 const getPage = async () => {
   const instance = await browser
   const page = await instance.newPage()
+  await page.setExtraHTTPHeaders({ spider: 'yiguang' })
   await page.setViewport(utils.setViewport())
   await page.setRequestInterception(true)
   // 屏蔽一些不必要的请求
@@ -42,7 +51,7 @@ const shopListPageTasks = _.shuffle(
       async run ({ collection }) {
         let page = await getPage()
         try {
-          const url = `http://192.168.1.7:8080/spider-main/?p=${v}`
+          const url = `${config.baseurl}?p=${v}`
           await page.goto(url, { waitUntil: 'domcontentloaded' })
 
           // 获取店铺 URL 和名称信息
@@ -104,7 +113,9 @@ const shopListPageTasks = _.shuffle(
           console.error(err)
         } finally {
           await new Promise(resolve => setTimeout(resolve, Math.random() * 500))
-          await page.close()
+          if (!noCloseForDebug) {
+            await page.close()
+          }
         }
       }
     }
@@ -113,7 +124,7 @@ const shopListPageTasks = _.shuffle(
 
 // 开始任务
 connectDB().then(async mongo => {
-  const db = mongo.db(dbname)
+  const db = mongo.db(config.dbname)
   shopCollection = db.collection('shops')
 
   /* 排列列表页面任务 */
@@ -128,13 +139,13 @@ connectDB().then(async mongo => {
       }
     })
   })
-  const todos = shopListPageTasks.filter(x => !finds.find(y => y._id === x.id))
+  const todos = shopListPageTasks.filter(x => !finds.find(y => y._id === x.id)).slice(1)
   console.log(`[INFO] 剩余${todos.length}个列表页任务`)
 
   await new Crawler({
     collection: listCollection,
     maxConcurrenceCount: 1,
-    interval: 5000,
+    interval: Math.random() * 500 + 500,
   })
     .exec(todos)
     .then(() => {
