@@ -1,7 +1,8 @@
 const fs = require('fs')
 const path = require('path')
 
-const { dir, mkdir, sleep } = require('../utils')
+const ocr = require('../plugins/ocr')
+const { dir, mkdir, sleep, filterSpace } = require('../utils')
 const { waitUntilLoaded, waitUntilJSLoaded, styles } = require('../utils/dom')
 const { getBrowser, utils } = require('../src/chrome')
 const preloadFile = fs.readFileSync(path.join(__dirname, '../src/preload.js'), 'utf8')
@@ -50,9 +51,15 @@ console.log('url:', url)
         const $style = document.createElement('style')
         $style.innerHTML = `
           .ad-list { display: none }
-          .official-nav-phone-block { padding: 20px }
-          #addressText { padding: 20px }
-          #addressText::before { content: '！' }
+          .official-nav-phone-block {
+            padding: 20px;
+            background: #ff4466;
+          }
+          #addressText {
+            padding: 20px;
+            font-weight: normal;
+            letter-spacing: 1px;
+          }
         `
         document.querySelector('head').appendChild($style)
 
@@ -115,7 +122,7 @@ console.log('url:', url)
         setTimeout(() => {
           console.log('[INFO] get owner and mobile failed')
           resolve(['-', '-'])
-        }, 3000)
+        }, (Math.random() * 1000 + 2000))
       })
     ]))
     data.owner = owner
@@ -125,19 +132,31 @@ console.log('url:', url)
     await mkdir(pageDir, true)
 
     // 热线
-    await page.evaluate(async () => await waitUntilLoaded('.official-nav-phone-block'))
     const $hotline = await page.evaluateHandle(() => document.querySelector('.official-nav-phone-block'))
-    await $hotline.screenshot({
-      path: dir.join(pageDir, 'hotline.png')
-    })
 
     // 地址
     await page.evaluate(async () => await waitUntilLoaded('#addressText'))
     const $address = await page.evaluateHandle(() => document.querySelector('#addressText'))
-    await $address.screenshot({
-      path: dir.join(pageDir, 'address.png')
-    })
+    await page.evaluate(($address, $hotline) => {
+      $address.after($hotline)
+    }, $address, $hotline)
 
+    // 地址和热线的 OCR
+    const $ocr = await page.evaluateHandle(() => document.querySelector('.center-second'))
+    await $ocr.screenshot({
+      path: dir.join(pageDir, 'ocr.png')
+    })
+    const ocrRes = await ocr(dir.join(pageDir, 'ocr.png'))
+    try {
+      data.address = filterSpace(ocrRes.words_result[0].words)
+      data.hotline = filterSpace(ocrRes.words_result[1].words)
+    } catch (ocrError) {
+      console.error('ocrError:', ocrError)
+      data.address = data.address || '-'
+      data.hotline = data.hotline || '-'
+    }
+
+    // 写入数据
     await fs.writeFileSync(dir.join(pageDir, 'data.json'), JSON.stringify(data))
 
     // await page.screenshot({ path: 'test.png' })

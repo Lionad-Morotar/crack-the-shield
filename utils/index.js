@@ -10,6 +10,8 @@ dir.join = path.join
 
 const sleep = (time = 500) => new Promise(resolve => setTimeout(resolve, time))
 
+const filterSpace = str => str.replace(/\s/g, '')
+
 // 创建文件夹
 async function mkdir(dirname, force = false) {
   if (fs.existsSync(dirname)) {
@@ -38,6 +40,7 @@ const notEmpty = obj => obj && Object.keys(obj).length > 0
 module.exports = {
   dir,
   sleep,
+  filterSpace,
   rimraf,
   mkdir,
   notEmpty,
