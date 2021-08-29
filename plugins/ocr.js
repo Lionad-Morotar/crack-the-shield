@@ -9,9 +9,19 @@ const pool = []
 const quque = []
 const maxLen = 10
 
-const ocr = (filePath) => {
+const ocr = (base64OrPath, type = 'base64') => {
   return new Promise((resolve, reject) => {
-    const imgContent = fs.readFileSync(filePath).toString('base64')
+    let imgContent
+    if (type === 'path') {
+      imgContent = fs.readFileSync(base64OrPath).toString('base64')
+    }
+    if (type === 'base64') {
+      imgContent =  base64OrPath
+    }
+    if (!imgContent) {
+      console.log('[INFO] no content in ocr')
+      return
+    }
     OCR.generalBasic(imgContent)
       .then(resolve)
       .catch(reject)

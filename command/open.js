@@ -143,10 +143,11 @@ console.log('url:', url)
 
     // 地址和热线的 OCR
     const $ocr = await page.evaluateHandle(() => document.querySelector('.center-second'))
-    await $ocr.screenshot({
-      path: dir.join(pageDir, 'ocr.png')
+    const ocrContent = await $ocr.screenshot({
+      type: 'png',
+      encoding: 'base64'
     })
-    const ocrRes = await ocr(dir.join(pageDir, 'ocr.png'))
+    const ocrRes = await ocr(ocrContent)
     try {
       data.address = filterSpace(ocrRes.words_result[0].words)
       data.hotline = filterSpace(ocrRes.words_result[1].words)
