@@ -37,6 +37,25 @@ const log = (...msgs) => {
 
 const notEmpty = obj => obj && Object.keys(obj).length > 0
 
+/**
+ * 寻找数据的波谷
+ * @see http://cn.voidcc.com/question/p-ptjbjrzv-tr.html
+ **/
+function findTroughs(array) {
+  const start = 1
+  const end = array.length - 2
+  const troughs = []
+  for (var i = start; i <= end; i++) {
+    const current = array[i]
+    const last = array[i - 1]
+    const next = array[i + 1]
+    if (current < next && current < last) {
+      troughs.push(i)
+    }
+  }
+  return troughs
+}
+
 module.exports = {
   dir,
   sleep,
@@ -45,5 +64,6 @@ module.exports = {
   mkdir,
   notEmpty,
   log,
+  findTroughs,
   conc
 }

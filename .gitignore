@@ -118,3 +118,4 @@ dist
 private/
 spider-test/
 mongo/
+.temp/
