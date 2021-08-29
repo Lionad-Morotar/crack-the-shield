@@ -24,7 +24,8 @@ module.exports = class Crawler {
   }
 
   // 添加任务
-  addTask(tasks) {
+  addTask(task) {
+    const tasks = Array.isArray(task) ? task : [task]
     let newTask = tasks.map(x => ({
       id: uuid(),
       task: x
@@ -106,7 +107,9 @@ module.exports = class Crawler {
     if (hasFind) {
       return findRes
     } else {
-      return await run.bind(this)()
+      return await run.bind(this)({
+        collection: this.collection
+      })
     }
   }
 

@@ -1,7 +1,7 @@
 const fs = require('fs')
 const path = require('path')
-const utils = require('../utils')
-const caser = require('../caser')
+const utils = require('../../memo/utils')
+const caser = require('../../memo/caser')
 
 const maxPage = 500
 
