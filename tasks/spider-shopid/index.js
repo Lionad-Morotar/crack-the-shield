@@ -1,4 +1,5 @@
 const _ = require('lodash')
+const UserAgent = require("user-agents")
 
 const connectDB = require('../../src/connect-db')
 const Crawler = require('../../src/crawler')
@@ -24,6 +25,11 @@ const getPage = async () => {
   await page.setExtraHTTPHeaders({ spider: 'yiguang' })
   await page.setViewport(utils.setViewport())
   await page.setRequestInterception(true)
+  const userAgent = new UserAgent({
+    deviceCategory: "desktop",
+    platform: "Win32",
+  })
+  await page.setUserAgent(userAgent.toString())
   // 屏蔽一些不必要的请求
   page.on('request', req => {
     const url = req.url()
@@ -145,7 +151,7 @@ connectDB().then(async mongo => {
   await new Crawler({
     collection: listCollection,
     maxConcurrenceCount: 1,
-    interval: Math.random() * 500 + 500,
+    interval: Math.random() * 500 + 500000,
   })
     .exec(todos)
     .then(() => {

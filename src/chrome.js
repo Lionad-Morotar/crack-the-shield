@@ -1,12 +1,13 @@
 const path = require('path')
 const puppeteer = require('puppeteer-extra')
 const StealthPlugin = require('puppeteer-extra-plugin-stealth')
+// const UAPlugin = require('puppeteer-extra-plugin-anonymize-ua')
 const { log } = require('../utils')
 
-// 逃离无头浏览器检测
 puppeteer.use(StealthPlugin())
+// puppeteer.use(UAPlugin())
 
-// 逃离指纹检测
+// 混淆指纹
 antiCanvasFPExtPath = path.join(__dirname, '../extension/anti-canvas-fp')
 
 const MAX = 1
@@ -23,7 +24,6 @@ const createInstance = async () => {
       args: [
         '--single-process',
         '--disable-gpu',
-        // '--disable-extension',
         '--no-vr-runtime',
         '--no-sandbox',
         '--no-zygote',
