@@ -3,23 +3,21 @@ const path = require('path')
 
 const { dir } = require('../utils')
 
-let nxContent = fs.readFileSync(dir('memo/statics/loaded.nx.js'), 'utf8')
-const attrName = '_0x5ab7'
+const FILENAME = 'script'
+
+let nxContent = fs.readFileSync(dir(`memo/statics/${FILENAME}/${FILENAME}.nx.js`), 'utf8')
+const attrName = '_0x46a74e'
 const strs = [
-  '/detail/', '10fQXGin',
-  '1589KjImGM', '368210gLZjYv',
-  'click', '32dYzLqV',
-  'data', '843292TxnSjk',
-  '1627827jNHFAP', 'length',
-  '15cVAUPZ', '#addressText',
-  '1706938RpNKWN', '5217311lSQsIY',
-  'substr', 'ajax',
-  '10776wLYPuR', 'emit',
-  '1320912mNXpzP', 'html',
-  'websocket', '#owner',
-  '/mobile', '#view-owner'
+  'charCodeAt', '402lYzVpj',
+  'String', '184566FbtOwC',
+  '2586681FJDgMu', 'navigator',
+  '2786400DMdyoH', '43840jbRtHW',
+  '151571bsjvYT', 'write',
+  '141qRscZu', 'stop',
+  'length', '487019SPLCOV',
+  'webdriver', '53272WgNAZV'
 ]
-const baseIDX = 0xc6
+const baseIDX = 0x6d
 let washNum
 
 /* 清洗十六进制数字 */
@@ -62,6 +60,6 @@ attrNames.map(samename => {
 
 /* 写入文件 */
 
-fs.writeFileSync(dir('memo/statics/loaded.js'), nxContent)
+fs.writeFileSync(dir(`memo/statics/${FILENAME}/${FILENAME}.js`), nxContent)
 
 // TODO setTimout

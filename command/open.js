@@ -86,7 +86,6 @@ console.log('url:', url)
     const [owner, mobile] = await page.evaluate(() => Promise.race([
       Promise.all([
         new Promise(resolve => {
-          console.log('wsUrl:', wsUrl)
           const ws = io(wsUrl, { transports: ['websocket'] })
           ws.on('connect', () => {
             ws.emit('i-want-a-name', uid, owner => resolve(owner))
@@ -96,7 +95,17 @@ console.log('url:', url)
           $.ajax({
             url: '/detail/' + uid + '/mobile',
             success (res) {
-              const mobile = es(res["data"])
+              const decodeMobile = (base64) => {
+                let mobile = ''
+                const numStr = window.atob(base64)
+                for (let i = 0; i < numStr.length; i++) {
+                  mobile += String.fromCharCode(
+                    numStrcharCodeAt(i) - 10
+                  )
+                }
+                return mobile
+              }
+              const mobile = decodeMobile(res.data)
               resolve(mobile)
             }
           })
