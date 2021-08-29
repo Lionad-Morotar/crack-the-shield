@@ -39,12 +39,15 @@ console.log('url:', url)
       })
     })
 
-    const data = { name: '', hotline: '', mobile: '', owner: '', address: '' }
+    const data = { uid: '', name: '', hotline: '', mobile: '', owner: '', address: '' }
     
     // TODO 超时
     // TODO referer
     await page.goto(url, { waitUntil: 'domcontentloaded' })
     const $document = await page.evaluateHandle(() => document)
+
+    // 获取 UID
+    data.uid = await page.evaluate(() => uid)
 
     // 获取标题内容
     data.name = await page.evaluate(
