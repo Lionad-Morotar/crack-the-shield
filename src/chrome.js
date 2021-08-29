@@ -12,6 +12,43 @@ antiCanvasFPExtPath = path.join(__dirname, '../extension/anti-canvas-fp')
 
 const MAX = 1
 const DEBUG_POINT_POOL = []
+const MINARGS = [
+  '--autoplay-policy=user-gesture-required',
+  '--disable-background-networking',
+  '--disable-background-timer-throttling',
+  '--disable-backgrounding-occluded-windows',
+  '--disable-breakpad',
+  '--disable-client-side-phishing-detection',
+  '--disable-component-update',
+  '--disable-default-apps',
+  '--disable-dev-shm-usage',
+  '--disable-domain-reliability',
+  '--disable-extensions',
+  '--disable-features=AudioServiceOutOfProcess',
+  '--disable-hang-monitor',
+  '--disable-ipc-flooding-protection',
+  '--disable-notifications',
+  '--disable-offer-store-unmasked-wallet-cards',
+  '--disable-popup-blocking',
+  '--disable-print-preview',
+  '--disable-prompt-on-repost',
+  '--disable-renderer-backgrounding',
+  '--disable-setuid-sandbox',
+  '--disable-speech-api',
+  '--disable-sync',
+  '--hide-scrollbars',
+  '--ignore-gpu-blacklist',
+  '--metrics-recording-only',
+  '--mute-audio',
+  '--no-default-browser-check',
+  '--no-first-run',
+  '--no-pings',
+  '--no-sandbox',
+  '--no-zygote',
+  '--password-store=basic',
+  '--use-gl=swiftshader',
+  '--use-mock-keychain',
+]
 
 // 创建实例以供之后使用
 const createInstance = async () => {
@@ -21,15 +58,12 @@ const createInstance = async () => {
       headless: false,
       ignoreHTTPSErrors: true,
       devtools: true,
+      userDataDir: '../cache',
       args: [
-        '--single-process',
-        '--disable-gpu',
-        '--no-vr-runtime',
-        '--no-sandbox',
-        '--no-zygote',
+        ...MINARGS,
         `--disable-extensions-except=${antiCanvasFPExtPath}`,
         `--load-extension=${antiCanvasFPExtPath}`
-      ]
+      ],
     })
     debugPort = await browser.wsEndpoint()
     DEBUG_POINT_POOL.push(debugPort)

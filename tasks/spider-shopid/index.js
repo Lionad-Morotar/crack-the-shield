@@ -177,13 +177,15 @@ function getShopListTask(k, v) {
           const res10px = []
           // 计算匹配程度
           let left = 85
-          while (left <= 398) {
+          while (left <= 395) {
             await page.evaluate(async ($sliderFloat, left) => {
               const rawStyle = $sliderFloat.getAttribute('style')
               $sliderFloat.setAttribute('style', rawStyle.replace(/left:\s*\d+px/, `left: ${left}px`))
             }, $sliderFloat, left)
             const $panel = await page.evaluateHandle(() => document.querySelector('.verify-img-panel'))
-            const panelImgBase64 = await $panel.screenshot()
+            const panelImgBase64 = await $panel.screenshot({
+              type: 'jpeg'
+            })
             const compareRes = await rembrandt({
               imageA: panelImgBase64,
               imageB: slider_s05[sliderTemplateID]
@@ -192,7 +194,7 @@ function getShopListTask(k, v) {
               left,
               diff: compareRes.differences
             })
-            left += 14
+            left += 15
           }
 
           // 过滤出3个波谷
@@ -243,7 +245,9 @@ function getShopListTask(k, v) {
               $sliderFloat.setAttribute('style', rawStyle.replace(/left:\s*\d+px/, `left: ${left}px`))
             }, $sliderFloat, left)
             const $panel = await page.evaluateHandle(() => document.querySelector('.verify-img-panel'))
-            const panelImgBase64 = await $panel.screenshot()
+            const panelImgBase64 = await $panel.screenshot({
+              type: 'jpeg'
+            })
             const compareRes = await rembrandt({
               imageA: panelImgBase64,
               imageB: slider_s1[sliderTemplateID]
@@ -371,12 +375,12 @@ connectDB().then(async mongo => {
       }
     })
   })
-  const todos = shopListPageTasks.filter(x => !finds.find(y => y._id === x.id)).slice(1)
+  const todos = shopListPageTasks.filter(x => !finds.find(y => y._id === x.id))
   console.log(`[INFO] 剩余${todos.length}个列表页任务`)
 
   await new Crawler({
     collection: listCollection,
-    maxConcurrenceCount: 5,
+    maxConcurrenceCount: 1,
     interval: Math.random() * 500 + 500000,
   })
     .exec(todos)
