@@ -33,7 +33,7 @@ console.log('url:', url)
         req.abort()
         return
       }
-      // 不加载外部脚本，打接口快一些
+      // 不加载某些外部脚本，提高响应速度
       if (
         url.match(/loaded.js/) ||
         url.match(/socket.io.min.js/)
@@ -46,16 +46,20 @@ console.log('url:', url)
     await page.evaluateOnNewDocument((socketIOFile) => {
       document.addEventListener('DOMContentLoaded', () => {
 
-        // 移除广告，提高加载速度
+        // 自定义样式
         const $style = document.createElement('style')
-        $style.innerHTML = `.ad-list { display: none }`
+        $style.innerHTML = `
+          .ad-list { display: none }
+          .official-nav-phone-block { padding: 20px }
+          #addressText { padding: 20px }
+          #addressText::before { content: '！' }
+        `
         document.querySelector('head').appendChild($style)
 
         // 加载本地 socket.io
         const $script = document.createElement('script')
         $script.innerHTML = socketIOFile
         document.body.appendChild($script)
-        console.log($script)
       })
     }, socketIOFile)
 
@@ -91,12 +95,6 @@ console.log('url:', url)
     // 热线
     await page.evaluate(async () => await window.waitUntilLoaded('.official-nav-phone-block'))
     const $hotline = await page.evaluateHandle(() => document.querySelector('.official-nav-phone-block'))
-    await page.evaluate(
-      $ele => $ele.setAttribute('style', styles({
-        padding: '20px'
-      })),
-      $hotline
-    )
     await $hotline.screenshot({
       path: dir.join(pageDir, 'hotline.png')
     })
@@ -104,15 +102,6 @@ console.log('url:', url)
     // 地址
     await page.evaluate(async () => await window.waitUntilLoaded('#addressText'))
     const $address = await page.evaluateHandle(() => document.querySelector('#addressText'))
-    await page.evaluate(
-      $ele => (
-        $ele.innerText = '！' + $ele.innerText,
-        $ele.setAttribute('style', styles({
-          padding: '20px'
-        }))
-      ),
-      $address
-    )
     await $address.screenshot({
       path: dir.join(pageDir, 'address.png')
     })
