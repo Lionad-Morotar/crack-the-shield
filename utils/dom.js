@@ -25,7 +25,7 @@ const waitUntilLoaded = function () {
       // 超时报错
       const errorTick = setTimeout(() => {
         tick && window.clearTimeout(tick)
-        reject()
+        reject('[ERR] not load', $elm)
       }, 10 * 1000)
 
       tick = setTimeout(() => {
@@ -54,7 +54,37 @@ const waitUntilLoaded = function () {
   }
 }
 
+// 等待，直到 window 上挂载了某个属性
+const waitUntilJSLoaded = function() {
+  const fn = (name) => {
+    let tick
+    return new Promise((resolve, reject) => {
+      const errorTick = setTimeout(() => {
+        tick && window.clearTimeout(tick)
+        reject('[ERR] not found props', name)
+      }, 5 * 1000)
+
+      const re = () => setTimeout(() => {
+        if (window[name]) {
+          window.clearTimeout(errorTick)
+          resolve()
+        } else {
+          tick = re()
+        }
+      }, 25)
+
+      tick = re()
+    })
+  }
+  if (window) {
+    window.waitUntilJSLoaded = fn
+  } else {
+    return fn
+  }
+}
+
 module.exports = {
   styles,
-  waitUntilLoaded
+  waitUntilLoaded,
+  waitUntilJSLoaded
 }

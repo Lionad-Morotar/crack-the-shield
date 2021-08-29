@@ -1,10 +1,12 @@
 // $ = undefined
 
+// window.console && (window.console.log = (...args) => {})
+
 /******************************************************** Utils */
 
 // TODO toString.toString() 
 function toNativeFn(obj, prop, fn) {
-  console.log(obj, prop, fn)
+  // console.log(obj, prop, fn)
   fn.toString = () => `function ${fn.name}() { [native code] }`
   Object.defineProperty(obj, prop, {
     get () {

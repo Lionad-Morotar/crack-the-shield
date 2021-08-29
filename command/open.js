@@ -1,10 +1,11 @@
 const fs = require('fs')
 const path = require('path')
 
-const { dir, mkdir } = require('../utils')
-const { waitUntilLoaded, styles } = require('../utils/dom')
+const { dir, mkdir, sleep } = require('../utils')
+const { waitUntilLoaded, waitUntilJSLoaded, styles } = require('../utils/dom')
 const { getBrowser, utils } = require('../src/chrome')
 const preloadFile = fs.readFileSync(path.join(__dirname, '../src/preload.js'), 'utf8')
+const socketIOFile = fs.readFileSync(path.join(__dirname, '../statics/socket.io.min.js'), 'utf8')
 
 const [_, __, url] = process.argv
 console.log('url:', url)
@@ -16,34 +17,56 @@ console.log('url:', url)
     await page.setViewport(utils.setViewport())
     await page.evaluateOnNewDocument(preloadFile)
     await page.evaluateOnNewDocument(waitUntilLoaded)
+    await page.evaluateOnNewDocument(waitUntilJSLoaded)
     await page.evaluateOnNewDocument(styles)
 
     // TODO canvas toString
     // TODO check load
+    // TODO load local socket.io
 
-    /* 移除广告，提高加载速度 */
+    /* 请求拦截器 */
     await page.setRequestInterception(true)
     page.on('request', req => {
-      if (req.url().match(/pexels-photo/)) {
+      const url = req.url()
+      // 不加载广告图片，提高速度
+      if (url.match(/pexels-photo/)) {
         req.abort()
-      } else {
-        req.continue()
+        return
       }
+      // 不加载外部脚本，打接口快一些
+      if (
+        url.match(/loaded.js/) ||
+        url.match(/socket.io.min.js/)
+      ) {
+        req.abort()
+        return
+      }
+      req.continue()
     })
-    await page.evaluateOnNewDocument(() => {
+    await page.evaluateOnNewDocument((socketIOFile) => {
       document.addEventListener('DOMContentLoaded', () => {
+
+        // 移除广告，提高加载速度
         const $style = document.createElement('style')
         $style.innerHTML = `.ad-list { display: none }`
         document.querySelector('head').appendChild($style)
+
+        // 加载本地 socket.io
+        const $script = document.createElement('script')
+        $script.innerHTML = socketIOFile
+        document.body.appendChild($script)
+        console.log($script)
       })
-    })
+    }, socketIOFile)
 
     const data = { uid: '', name: '', hotline: '', mobile: '', owner: '', address: '' }
     
     // TODO 超时
     // TODO referer
-    await page.goto('http://www.baidu.com', { waitUntil: 'domcontentloaded' })
-    await page.goto(url, { waitUntil: 'domcontentloaded' })
+    // await page.goto('http://www.baidu.com', { waitUntil: 'domcontentloaded' })
+    await page.goto(url)
+    await page.evaluate(async () => await window.waitUntilJSLoaded('io'))
+    console.log('io')
     const $document = await page.evaluateHandle(() => document)
 
     // 获取 UID
@@ -55,11 +78,18 @@ console.log('url:', url)
       $document
     )
 
+    // 获取手机号和号主
+    // await page.hover('#view-owner')
+    // console.log('down')
+    // await page.evaluate(() => {
+    //   const io = io(wsUrl, { transports: 'websocket' })
+    // })
+
     const pageDir = dir('spider-test/', data.name)
     await mkdir(pageDir, true)
 
     // 热线
-    await page.evaluate(async () => await waitUntilLoaded('.official-nav-phone-block'))
+    await page.evaluate(async () => await window.waitUntilLoaded('.official-nav-phone-block'))
     const $hotline = await page.evaluateHandle(() => document.querySelector('.official-nav-phone-block'))
     await page.evaluate(
       $ele => $ele.setAttribute('style', styles({
@@ -72,7 +102,7 @@ console.log('url:', url)
     })
 
     // 地址
-    await page.evaluate(async () => await waitUntilLoaded('#addressText'))
+    await page.evaluate(async () => await window.waitUntilLoaded('#addressText'))
     const $address = await page.evaluateHandle(() => document.querySelector('#addressText'))
     await page.evaluate(
       $ele => (

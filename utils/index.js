@@ -8,6 +8,8 @@ const isProd = process.env.NODE_ENV === 'production'
 const dir = (...absPaths) => path.join(__dirname, '../', ...absPaths)
 dir.join = path.join
 
+const sleep = (time = 500) => new Promise(resolve => setTimeout(resolve, time))
+
 // 创建文件夹
 async function mkdir(dirname, force = false) {
   if (fs.existsSync(dirname)) {
@@ -35,6 +37,7 @@ const notEmpty = obj => obj && Object.keys(obj).length > 0
 
 module.exports = {
   dir,
+  sleep,
   rimraf,
   mkdir,
   notEmpty,

@@ -16,12 +16,4 @@
         },
       });
     });
-  var _0x1851a6 = 1;
-  function _0x1d4efe() {
-    var _0x1133d3 = nasnu1["substr"](0, _0x1851a6);
-    $("#addressText")["html"](_0x1133d3), _0x1851a6++;
-    if (_0x1851a6 > nasnu1["length"]) return;
-    setTimeout(_0x1d4efe, 80);
-  }
-  _0x1d4efe();
 })();
