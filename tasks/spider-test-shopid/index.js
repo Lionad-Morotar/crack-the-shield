@@ -2,31 +2,119 @@ const _ = require('lodash')
 
 const connectDB = require('../../src/connect-db')
 const Crawler = require('../../src/crawler')
+const { getBrowser, utils } = require('../../src/chrome')
 const pageMap = require('./page.json')
+const dbname = process.env.NODE_ENV === 'production'
+  ? 'spider'
+  : 'spider-test'
 
+// 初始化浏览器
+const browser = (async () => await getBrowser())()
+const getPage = async () => {
+  const instance = await browser
+  const page = await instance.newPage()
+  await page.setViewport(utils.setViewport())
+  await page.setRequestInterception(true)
+  // 屏蔽一些不必要的请求
+  page.on('request', req => {
+    const url = req.url()
+    if (
+      url.match(/title.png/) ||
+      url.match(/index.css/) ||
+      url.match(/bfjs/) ||
+      url.match(/jquery.min.js/) ||
+      url.match(/script.js/)
+    ) {
+      req.abort()
+      return
+    }
+    req.continue()
+  })
+  return page
+}
+
+// 创建店铺列表页任务
+let shopCollection = null
 const shopListPageTasks = _.shuffle(
   Object.entries(pageMap).map(([k, v]) => {
     return {
       id: k,
       async run ({ collection }) {
-        const url = `http://192.168.1.7:8080/spider-main/?p=${v}`
-        const data = { _id: k, url }
-        await new Promise((resolve, reject) => {
-          collection.insertOne(data, function (err) {
-            if (err) {
-              reject(err)
-            } else {
-              resolve()
-            }
+        let page = await getPage()
+        try {
+          const url = `http://192.168.1.7:8080/spider-main/?p=${v}`
+          await page.goto(url, { waitUntil: 'domcontentloaded' })
+
+          // 获取店铺 URL 和名称信息
+          const shops = await page.evaluate(() => {
+            const $shops = [...document.querySelectorAll('.exhibition')]
+            return $shops.map($shop => {
+              const idMatch = $shop.getAttribute('href').match(/\/(.*)/)
+              if (idMatch) {
+                const [all, id] = idMatch
+                const name = $shop.querySelector('.company-name').innerText.replace(/\s/g, '')
+                return { id, name }
+              } else {
+                throw new Error('[ERR] no id matched')
+              }
+            })
           })
-        })
+
+          // 储存店铺数据
+          await Promise.all(
+            shops.map(shop => new Promise((resolve, reject) => {
+              shopCollection.deleteMany({ _id: shop.id }, function (err) {
+                if (err) {
+                  reject(err)
+                }
+                const data = {
+                  _id: shop.id,
+                  name: shop.name,
+                  referrer: url
+                }
+                shopCollection.insertOne(data, function (err) {
+                  if (err) {
+                    reject(err)
+                  } else {
+                    resolve()
+                  }
+                })
+              })
+            }))
+          )
+
+          // 储存列表页面数据
+          const data = { _id: k, url }
+          await new Promise((resolve, reject) => {
+            collection.deleteMany({ _id: k}, function (err) {
+              if (err) {
+                reject(err)
+              }
+              collection.insertOne(data, function (err) {
+                if (err) {
+                  reject(err)
+                } else {
+                  resolve()
+                }
+              })
+            })
+          })
+
+        } catch (err) {
+          console.error(err)
+        } finally {
+          await new Promise(resolve => setTimeout(resolve, Math.random() * 500))
+          await page.close()
+        }
       }
     }
   })
 )
 
+// 开始任务
 connectDB().then(async mongo => {
-  const db = mongo.db("spider-test")
+  const db = mongo.db(dbname)
+  shopCollection = db.collection('shops')
 
   /* 排列列表页面任务 */
 
@@ -43,7 +131,11 @@ connectDB().then(async mongo => {
   const todos = shopListPageTasks.filter(x => !finds.find(y => y._id === x.id))
   console.log(`[INFO] 剩余${todos.length}个列表页任务`)
 
-  await new Crawler({ colection: listCollection })
+  await new Crawler({
+    collection: listCollection,
+    maxConcurrenceCount: 1,
+    interval: 5000,
+  })
     .exec(todos)
     .then(() => {
       console.log('[INFO] task done')

@@ -1,5 +1,6 @@
 const uuid = () => String(+new Date()) + String(Math.random()).slice(-6)
 
+// 用于管理并发及任务控制
 module.exports = class Crawler {
 
   constructor(arg) {
@@ -8,17 +9,14 @@ module.exports = class Crawler {
     }
     this.todoList = []
     this.doingList = []
-    this.interval = 0
+    this.interval = arg.interval
     this.collection = arg.collection
-    this.config = Object.assign({
-      force: false,
-      maxConcurrenceCount: 5
-    })
+    this.maxConcurrenceCount = arg.maxConcurrenceCount || 5
+    this.force = arg.force || false
   }
 
   // 调度任务并获取任务执行的返回结果
-  async exec(tasks, config = {}) {
-    Object.assign(this.config, config)
+  async exec(tasks) {
     this.addTask(tasks)
     return Promise.resolve(await this.distributeTask())
   }
@@ -47,7 +45,7 @@ module.exports = class Crawler {
    * 返回剩下的并发数量
    */
   calcRestConcurrenceCount(todoList = this.todoList) {
-    const doingListEmpty = this.config.maxConcurrenceCount - this.doingList.length
+    const doingListEmpty = this.maxConcurrenceCount - this.doingList.length
     return Math.min(doingListEmpty < 0 ? 0 : doingListEmpty, todoList.length)
   }
 
@@ -70,11 +68,10 @@ module.exports = class Crawler {
               results.push(res)
               if (results.length === totalTaskLen) resolve(results)
               this.removeTask(task)
-
-              // 继续下一个任务
-              resolve(await doingBinded())
               // 任务间隙休息片刻
               await new Promise(resolve => setTimeout(resolve, this.interval))
+              // 继续下一个任务
+              resolve(await doingBinded())
             })
           }
         })
@@ -91,26 +88,30 @@ module.exports = class Crawler {
   async run(task) {
     const { id, idtype, run } = task
 
-    const findFn = async () => {
-      return await new Promise(resolve => {
-        if (!id) resolve(false)
-        const ID = { _id: id, idtype }
-        this.collection.find(ID).toArray(function (err, res) {
-          if (err) throw err
-          resolve(res)
-        })
-      })
-    }
+    // const findFn = async () => {
+    //   return await new Promise(resolve => {
+    //     if (!id) resolve(false)
+    //     const ID = { _id: id, idtype }
+    //     this.collection.find(ID).toArray(function (err, res) {
+    //       if (err) throw err
+    //       resolve(res)
+    //     })
+    //   })
+    // }
 
-    const findRes = this.config.force ? [] : (await findFn())
-    const hasFind = findRes.length > 0
-    if (hasFind) {
-      return findRes
-    } else {
-      return await run.bind(this)({
-        collection: this.collection
-      })
-    }
+    // const findRes = this.force ? [] : (await findFn())
+    // const hasFind = findRes.length > 0
+    // if (hasFind) {
+    //   return findRes
+    // } else {
+    //   return await run.bind(this)({
+    //     collection: this.collection
+    //   })
+    // }
+
+    return await run.bind(this)({
+      collection: this.collection
+    })
   }
 
 }

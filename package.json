@@ -7,7 +7,8 @@
     "download": "node ./command/download.js",
     "open": "node ./command/open.js",
     "db": "mongod --dbpath D:\\@Github\\crack-the-shield\\mongo",
-    "spider-test-shopid": "node ./tasks/spider-test-shopid/index.js"
+    "spider-test-shopid": "node ./tasks/spider-test-shopid/index.js",
+    "spider-shopid": "cross-env NODE_ENV=production node ./tasks/spider-test-shopid/index.js"
   },
   "author": "Lionad",
   "license": "ISC",
