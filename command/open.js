@@ -69,8 +69,7 @@ console.log('url:', url)
     // TODO referer
     // await page.goto('http://www.baidu.com', { waitUntil: 'domcontentloaded' })
     await page.goto(url)
-    await page.evaluate(async () => await window.waitUntilJSLoaded('io'))
-    console.log('io')
+    await page.evaluate(async () => await waitUntilJSLoaded('io'))
     const $document = await page.evaluateHandle(() => document)
 
     // 获取 UID
@@ -83,24 +82,48 @@ console.log('url:', url)
     )
 
     // 获取手机号和号主
-    // await page.hover('#view-owner')
-    // console.log('down')
-    // await page.evaluate(() => {
-    //   const io = io(wsUrl, { transports: 'websocket' })
-    // })
+    await page.hover('#view-owner')
+    const [owner, mobile] = await page.evaluate(() => Promise.race([
+      Promise.all([
+        new Promise(resolve => {
+          console.log('wsUrl:', wsUrl)
+          const ws = io(wsUrl, { transports: ['websocket'] })
+          ws.on('connect', () => {
+            ws.emit('i-want-a-name', uid, owner => resolve(owner))
+          })
+        }),
+        new Promise(resolve => {
+          $.ajax({
+            url: '/detail/' + uid + '/mobile',
+            success (res) {
+              const mobile = es(res["data"])
+              resolve(mobile)
+            }
+          })
+        })
+      ]),
+      new Promise(resolve => {
+        setTimeout(() => {
+          console.log('[INFO] get owner and mobile failed')
+          resolve(['-', '-'])
+        }, 3000)
+      })
+    ]))
+    data.owner = owner
+    data.mobile = mobile
 
     const pageDir = dir('spider-test/', data.name)
     await mkdir(pageDir, true)
 
     // 热线
-    await page.evaluate(async () => await window.waitUntilLoaded('.official-nav-phone-block'))
+    await page.evaluate(async () => await waitUntilLoaded('.official-nav-phone-block'))
     const $hotline = await page.evaluateHandle(() => document.querySelector('.official-nav-phone-block'))
     await $hotline.screenshot({
       path: dir.join(pageDir, 'hotline.png')
     })
 
     // 地址
-    await page.evaluate(async () => await window.waitUntilLoaded('#addressText'))
+    await page.evaluate(async () => await waitUntilLoaded('#addressText'))
     const $address = await page.evaluateHandle(() => document.querySelector('#addressText'))
     await $address.screenshot({
       path: dir.join(pageDir, 'address.png')
