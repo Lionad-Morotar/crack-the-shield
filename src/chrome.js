@@ -9,6 +9,9 @@ const { log, dir } = require('../utils')
 const { getProxy } = require('./private/dailiyun')
 const { proxyURL, getAuthorization } = require('./private/xdaili')
 
+const USE_PROXY = 'XDAILI'
+// const USE_PROXY = 'DAILIYUN'
+
 puppeteer.use(StealthPlugin())
 // puppeteer.use(UAPlugin())
 
@@ -106,7 +109,9 @@ const getInstance = async () => {
  **/
 const useProxy = async (page, proxyReq) => {
   await page.setRequestInterception(true)
-  const proxy = await getProxy()
+  const proxy = USE_PROXY === 'DAILIYUN'
+    ? await getProxy()
+    : proxyURL
   // console.log('[INFO] proxy', proxy)
   await page.on('request', async req => {
     try {
@@ -148,7 +153,17 @@ const useProxy = async (page, proxyReq) => {
             method: req.method(),
             strictSSL: false,
             followRedirect: false,
-            headers: req.headers(),
+            headers: USE_PROXY === 'DAILIYUN'
+              ? req.headers()
+              : {
+                ...req.headers(),
+                'proxy-authorization': getAuthorization(),
+                'Proxy-Authorization': getAuthorization()
+              },
+            proxyHeaderWhiteList: [
+              'proxy-authorization',
+              'Proxy-Authorization'
+            ],
             body: req.postData(),
             proxy,
             tunnel: true
