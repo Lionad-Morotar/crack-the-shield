@@ -160,11 +160,12 @@ function getShopListTask(k, v) {
 
         log(`DONE：${url} ${shops.length}`)
 
-        page._useTime = (page._useTime || 0) + 1
-        const useMore = !page._noUseMore && (page._useTime < 20)
-        if (useMore) {
-          return page
-        }
+        await page.close()
+        // page._useTime = (page._useTime || 0) + 1
+        // const useMore = !page._noUseMore && (page._useTime < 20)
+        // if (useMore) {
+        //   return page
+        // }
 
       } catch (err) {
 
@@ -203,7 +204,7 @@ connectDB().then(async mongo => {
 
   await new Crawler({
     collection: listCollection,
-    maxConcurrenceCount: 1,
+    maxConcurrenceCount: 5,
     interval: Math.random() * 500 + 500,
   })
     .exec(todos)
