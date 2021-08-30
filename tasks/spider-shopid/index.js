@@ -260,6 +260,7 @@ function getShopListTask(k, v) {
           }
           const min1pxDiff = Math.min(...res1px.map(x => x.diff))
           const exactLeft = res1px.find(x => x.diff === min1pxDiff).left
+          console.log('[INFO] exact left px', exactLeft)
 
           // 重置样式
           await page.evaluate(async $sliderFloat => {
