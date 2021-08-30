@@ -1,5 +1,3 @@
-const fs = require('fs')
-const path = require('path')
 const _ = require('lodash')
 const UserAgent = require("user-agents")
 
@@ -20,8 +18,8 @@ const config = isProd
     isDev: true,
     useLocalSliderNum: true,
     dbname: 'spider-test',
-    // baseurl: 'http://192.168.1.7:8080/spider-main/'
-    baseurl: 'http://192.168.1.7:8080/spider-slider'
+    baseurl: 'http://192.168.1.7:8080/spider-main/'
+    // baseurl: 'http://192.168.1.7:8080/spider-slider'
     // baseurl: 'https://www.ipaddress.com'
     // baseurl: 'https://www.baidu.com'
   }
@@ -82,16 +80,23 @@ const shopListPageTasks = _.shuffle(
 function getShopListTask(k, v) {
   return {
     id: k,
-      async run({ collection }) {
-      const page = await getPage()
+    async run({ collection, artifact }) {
+      const page = artifact || (await getPage())
+      const isPageUsed = page === artifact
       try {
         const url = `${config.baseurl}?p=${v}`
-        await sleep(1000)
+        !isPageUsed && (await sleep(1000))
         await page.goto(url, { waitUntil: 'domcontentloaded' })
         await page.bringToFront()
 
         /* 滑块验证 */
-        await antiSlider(page, config)
+        const sliderRes = await antiSlider(page, config)
+        if (isPageUsed) {
+          if (sliderRes !== 'skip') {
+            isPageUsed
+          }
+          page._noUseMore = false
+        }
 
         // 获取店铺 URL 和名称信息
         const shops = await page.evaluate(() => {
@@ -151,15 +156,22 @@ function getShopListTask(k, v) {
           })
         })
 
-        log('done one shop-list-task')
+        log(`DONE：${url} ${shops.length}`)
+
+        page._useTime = (page._useTime || 0) + 1
+        const useMore = !page._noUseMore && (page._useTime < 20)
+        if (useMore) {
+          return page
+        }
 
       } catch (err) {
+
         console.log(err)
         log.error(err.message)
         this.addTask(getShopListTask(k, v))
-      } finally {
-        await new Promise(resolve => setTimeout(resolve, Math.random() * 500))
         await page.close()
+
+      } finally {
         // await browser.close()
       }
     }

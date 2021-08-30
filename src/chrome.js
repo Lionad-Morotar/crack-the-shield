@@ -189,10 +189,10 @@ module.exports = {
    * 帮助函数
    **/
   utils: {
-    setViewport({ width, height } = { width: 1920, height: 1080}) {
+    setViewport({ width, height } = { width: 1366, height: 768}) {
       return {
-        width: width || 1920,
-        height: height || 1080
+        width: width || 1366,
+        height: height || 768
       }
     }
   }

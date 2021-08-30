@@ -238,12 +238,15 @@ module.exports = async function antiSlider(page, config, retry) {
     )
     await page.mouse.up()
 
+    // 等待页面跳转（或重试验证码）
     try {
-      await page.waitForNavigation({ timeout: 6 * 1000 })
+      await page.waitForNavigation({ timeout: 6.5 * 1000 })
       await sleep(500)
     } catch (error) {
       await antiSlider(page, config, retry+1)
     }
     await antiSlider(page, config, retry+1)
+  } else {
+    return 'skip'
   }
 }
