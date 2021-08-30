@@ -6,6 +6,7 @@
   "scripts": {
     "download": "node ./command/download.js",
     "open": "node ./command/open.js",
+    "dist": "http-server -c0 ./dist",
     "db": "mongod --dbpath D:\\@Github\\crack-the-shield\\mongo",
     "test:spider-shopid": "cross-env NODE_ENV=test node ./tasks/spider-shopid/index.js",
     "prod:spider-shopid": "cross-env NODE_ENV=production node ./tasks/spider-shopid/index.js"
@@ -26,6 +27,7 @@
   },
   "devDependencies": {
     "cross-env": "^7.0.3",
+    "http-server": "^13.0.1",
     "nodemon": "^2.0.7"
   }
 }
