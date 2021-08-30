@@ -8,8 +8,8 @@
     "open": "node ./command/open.js",
     "kill": "taskkill /f /im chrome.exe",
     "db": "mongod --dbpath D:\\@Github\\crack-the-shield\\mongo",
-    "test:spider-shopid": "cross-env NODE_ENV=test node ./tasks/spider-shopid/index.js",
-    "prod:spider-shopid": "cross-env NODE_ENV=production node ./tasks/spider-shopid/index.js"
+    "spider-shopid:test": "cross-env NODE_ENV=test node ./tasks/spider-shopid/index.js",
+    "spider-shopid:prod": "cross-env NODE_ENV=production node ./tasks/spider-shopid/index.js"
   },
   "author": "Lionad",
   "license": "ISC",

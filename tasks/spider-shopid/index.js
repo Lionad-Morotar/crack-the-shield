@@ -43,9 +43,9 @@ const config = isProd
     useLocalSliderNum: true,
     dbname: 'spider-test',
     // baseurl: 'http://192.168.1.7:8080/spider-main/'
-    // baseurl: 'http://192.168.1.7:8080/spider-slider'
+    baseurl: 'http://192.168.1.7:8080/spider-slider'
     // baseurl: 'https://www.ipaddress.com'
-    baseurl: 'https://www.baidu.com'
+    // baseurl: 'https://www.baidu.com'
   }
 
 // 初始化浏览器
@@ -53,6 +53,7 @@ const browser = (async () => await getBrowser())()
 const getPage = async () => {
   const instance = await browser
   const page = await instance.newPage()
+  await page.setDefaultTimeout(60 * 1000)
   await page.setExtraHTTPHeaders({ spider: 'yiguang' })
   await page.evaluateOnNewDocument(waitUntilLoaded)
   await page.evaluateOnNewDocument(waitUntilPropsLoaded)
@@ -355,8 +356,8 @@ function getShopListTask(k, v) {
       } finally {
         await new Promise(resolve => setTimeout(resolve, Math.random() * 500))
         if (!noCloseForDebug) {
-          await page.close()
-          await browser.close()
+          // await page.close()
+          // await browser.close()
         }
       }
     }

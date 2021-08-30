@@ -104,14 +104,17 @@ const useProxy = async (page, proxyReq) => {
   await page.setRequestInterception(true)
   await page.on('request', async req => {
     try {
+      const url = req.url()
+      const resType = req.resourceType()
+      if (url.includes('192.168')) {
+        return req.continue()
+      }
       if (proxyReq) {
         const continueReq = proxyReq(req)
         if (!continueReq) {
           return
         }
       }
-      const url = req.url()
-      const resType = req.resourceType()
       if (['document', 'xhr', 'fetch'].includes(resType)) {
         const response = await new Promise((resolve, reject) => {
           request({
