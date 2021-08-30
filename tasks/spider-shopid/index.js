@@ -7,7 +7,7 @@ const ocr = require('../../plugins/ocr')
 const rembrandt = require('../../plugins/rembrandt')
 const connectDB = require('../../src/connect-db')
 const Crawler = require('../../src/crawler')
-const { getBrowser, utils } = require('../../src/chrome')
+const { getBrowser, useProxy, utils } = require('../../src/chrome')
 const { findTroughs, sleep } = require('../../utils')
 const { waitUntilLoaded, waitUntilPropsLoaded } = require('../../utils/dom')
 const pageMap = require('./page.json')
@@ -43,7 +43,9 @@ const config = isProd
     useLocalSliderNum: true,
     dbname: 'spider-test',
     // baseurl: 'http://192.168.1.7:8080/spider-main/'
-    baseurl: 'http://192.168.1.7:8080/spider-slider'
+    // baseurl: 'http://192.168.1.7:8080/spider-slider'
+    // baseurl: 'https://www.ipaddress.com'
+    baseurl: 'https://www.baidu.com'
   }
 
 // 初始化浏览器
@@ -62,7 +64,7 @@ const getPage = async () => {
   })
   await page.setUserAgent(userAgent.toString())
   // 屏蔽一些不必要的请求
-  page.on('request', req => {
+  await useProxy(page, req => {
     const url = req.url()
     if (
       url.match(/title.png/) ||
@@ -72,9 +74,10 @@ const getPage = async () => {
       url.match(/script.js/)
     ) {
       req.abort()
-      return
+      return false
+    } else {
+      return true
     }
-    req.continue()
   })
   await page.evaluateOnNewDocument(async () => {
     document.addEventListener('DOMContentLoaded', () => {
@@ -96,6 +99,7 @@ const shopListPageTasks = _.shuffle(
     return getShopListTask(k, v)
   })
 )
+// TODO 出错自动重试机制
 function getShopListTask(k, v) {
   return {
     id: k,
@@ -352,6 +356,7 @@ function getShopListTask(k, v) {
         await new Promise(resolve => setTimeout(resolve, Math.random() * 500))
         if (!noCloseForDebug) {
           await page.close()
+          await browser.close()
         }
       }
     }

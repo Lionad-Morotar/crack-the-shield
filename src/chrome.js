@@ -1,8 +1,12 @@
+const fs = require('fs')
 const path = require('path')
+const request = require('request')
 const puppeteer = require('puppeteer-extra')
 const StealthPlugin = require('puppeteer-extra-plugin-stealth')
 // const UAPlugin = require('puppeteer-extra-plugin-anonymize-ua')
+
 const { log } = require('../utils')
+const { proxyURL, getAuthorization } = require('./private/xdaili')
 
 puppeteer.use(StealthPlugin())
 // puppeteer.use(UAPlugin())
@@ -92,12 +96,73 @@ const getInstance = async () => {
   return chrome
 }
 
+/**
+ * 使用代理
+ * 使用时需要注意 page.on('request') 的顺序
+ **/
+const useProxy = async (page, proxyReq) => {
+  await page.setRequestInterception(true)
+  await page.on('request', async req => {
+    try {
+      if (proxyReq) {
+        const continueReq = proxyReq(req)
+        if (!continueReq) {
+          return
+        }
+      }
+      const url = req.url()
+      const resType = req.resourceType()
+      if (['document', 'xhr', 'fetch'].includes(resType)) {
+        const response = await new Promise((resolve, reject) => {
+          request({
+            // url: 'https://enb6hk1stgczkkc.m.pipedream.net',
+            url,
+            method: req.method(),
+            strictSSL: false,
+            followRedirect: false,
+            headers: {
+              ...req.headers(),
+              'proxy-authorization': getAuthorization(),
+              'Proxy-Authorization': getAuthorization()
+            },
+            proxyHeaderWhiteList: [
+              'proxy-authorization',
+              'Proxy-Authorization'
+            ],
+            body: req.postData(),
+            proxy: proxyURL,
+          }, (err, proxedResponse) => {
+            if (err) {
+              reject(err)
+            } else {
+              console.log(`[INFO] proxy response code`, proxedResponse.statusCode)
+              resolve(proxedResponse)
+            }
+          })
+        })
+        return req.respond({
+          status: response.statusCode,
+          contentType: response.headers['content-type'],
+          headers: response.headers,
+          body: response.body,
+        })
+      } else {
+        req.continue()
+      }
+    } catch (e) {
+      console.error('[ERR]', e)
+      req.continue && req.continue()
+    }
+  })
+}
+
 module.exports = {
   /**
    * @see https://pptr.dev/ puppeteer 文档
    **/
   chrome: puppeteer,
   getBrowser: getInstance,
+  useProxy,
   /**
    * 帮助函数
    **/
