@@ -20,13 +20,13 @@ const waitUntilLoaded = function () {
       : $elm
     return new Promise((resolve, reject) => {
       if (!target) {
-        console.log('[INFO] skip wait no elem')
+        console.log('跳过等待')
         resolve()
       }
       // 超时报错
       const errorTick = setTimeout(() => {
         tick && window.clearTimeout(tick)
-        reject('[ERR] not load', $elm)
+        reject('等待超时')
       }, 10 * 1000)
 
       tick = setTimeout(() => {
@@ -62,7 +62,7 @@ const waitUntilPropsLoaded = function () {
     return new Promise((resolve, reject) => {
       const errorTick = setTimeout(() => {
         tick && window.clearTimeout(tick)
-        reject('[ERR] not found props', name)
+        reject('没有找到对象上的' + name + '属性')
       }, maxTimeout)
 
       const re = () => setTimeout(() => {
@@ -96,7 +96,7 @@ const waitUntil = function () {
     return new Promise((resolve, reject) => {
       const errorTick = setTimeout(() => {
         tick && window.clearTimeout(tick)
-        reject('[ERR] wait timeout')
+        reject('等待超时')
       }, maxTimeout)
 
       const re = () => setTimeout(() => {

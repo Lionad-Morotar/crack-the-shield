@@ -154,6 +154,7 @@ function getShopListTask(k, v) {
         log('done one shop-list-task')
 
       } catch (err) {
+        // console.log(err)
         log.error(err.message)
         this.addTask(getShopListTask(k, v))
       } finally {

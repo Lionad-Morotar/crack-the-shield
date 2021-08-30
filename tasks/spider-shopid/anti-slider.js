@@ -3,7 +3,7 @@ const path = require('path')
 
 const ocr = require('../../plugins/ocr')
 const rembrandt = require('../../plugins/rembrandt')
-const { findTroughs, log } = require('../../utils')
+const { findTroughs, sleep, log } = require('../../utils')
 
 const slider_1_raw = fs.readFileSync(path.join(__dirname, './sliders/slider-1-raw.png'))
 const slider_2_raw = fs.readFileSync(path.join(__dirname, './sliders/slider-2-raw.png'))
@@ -25,10 +25,19 @@ const slider_s1 = {
   3: slider_3_s1
 }
 
+const MAX_RETRY = 2
+let retry = 0
+
 // 检测验证码并出错重试
 module.exports = async function antiSlider(page, config) {
+  if (retry++ > MAX_RETRY) {
+    throw new Error('超过最大验证码次数')
+  }
+  const checkHasSlider = async () => {
+    return await page.evaluate(() => document.querySelector('.verify-img-panel'))
+  }
 
-  const $slider = await page.evaluate(() => document.querySelector('.verify-img-panel'))
+  const $slider = await checkHasSlider()
   if ($slider) {
 
     // 等子滑块加载完毕...
@@ -50,15 +59,15 @@ module.exports = async function antiSlider(page, config) {
     let num
     if (config.useLocalSliderNum) {
       num = 1
-      log('use dev slider num' + num)
+      log('移动至滑块：' + num)
     } else {
       const ocrRes = await ocr.numbers(sliderImgBase64, 'base64')
       if (ocrRes && ocrRes.words_result_num >= 0) {
         num = ocrRes.words_result[0].words.split('')[0]
       } else {
-        throw new Error('no slider number found')
+        throw new Error('没有找到滑块')
       }
-      log('slider num' + num)
+      log('移动至滑块：' + num)
     }
 
     // 找到是哪种类型的 slider
@@ -81,9 +90,9 @@ module.exports = async function antiSlider(page, config) {
     const minDifferences = Math.min(...typeRes.map(x => x.differences))
     const sliderTemplateID = typeRes.findIndex(x => x.differences === minDifferences) + 1
     if (sliderTemplateID) {
-      log('slider template' + sliderTemplateID)
+      log('滑块背景类型：' + sliderTemplateID)
     } else {
-      throw new Error('no slider type found')
+      throw new Error('没有找到背景类型')
     }
 
     // 设置滑块样式以方便图片比较
@@ -98,15 +107,19 @@ module.exports = async function antiSlider(page, config) {
       $sliderBG.setAttribute('style', 'filter:grayscale(1)')
     }, $sliderBG)
 
-    // 用 10px 的速度取得局部最优解
+    // 设置缩放（加速）
     const $slider = await page.evaluateHandle(() => document.querySelector('.verify-slide'))
     await page.evaluate(async $slider => {
       $slider.setAttribute('style', 'transform:scale(0.5)')
     }, $slider)
+    await sleep(500)
+
+
+    // 用 10px 的速度取得局部最优解
     const res10px = []
     // 计算匹配程度
     let left = 85
-    while (left <= 395) {
+    while (left <= 405) {
       await page.evaluate(async ($sliderFloat, left) => {
         const rawStyle = $sliderFloat.getAttribute('style')
         $sliderFloat.setAttribute('style', rawStyle.replace(/left:\s*\d+px/, `left: ${left}px`))
@@ -152,13 +165,13 @@ module.exports = async function antiSlider(page, config) {
         }, [])
       }
       if (!count) {
-        throw new Error('throughs not found')
+        throw new Error('没有找到波谷：' + res10px.map(x => x.diff).join(','))
       }
       if (group.length === 3) {
         res10px3left = group.map(x => res10px[x])
       }
     } else {
-      throw new Error('throughs not enough')
+      throw new Error('波谷不够：' + res10px.map(x => x.diff).join(','))
     }
 
     // 遍历取得最优解
@@ -166,7 +179,7 @@ module.exports = async function antiSlider(page, config) {
       $slider.setAttribute('style', '')
     }, $slider)
     const mudLeft = res10px3left[num - 1].left
-    left = mudLeft - 7
+    left = mudLeft - 4
     const res1px = []
     while (left <= mudLeft + 7) {
       await page.evaluate(async ($sliderFloat, left) => {
@@ -198,7 +211,7 @@ module.exports = async function antiSlider(page, config) {
       $sliderBG.setAttribute('style', '')
     }, $sliderBG)
 
-    // 开始移动滑块
+    // 模拟人肉移动滑块
     const $move = await page.evaluateHandle(() => document.querySelector('.verify-move-block'))
     const moveBox = await $move.boundingBox()
     await page.mouse.move(
@@ -212,6 +225,21 @@ module.exports = async function antiSlider(page, config) {
       moveBox.y + moveBox.height / 2,
       { steps: 8 }
     )
+    await sleep(Math.random() * 100)
+    await page.mouse.move(
+      moveBox.x + exactLeft + (moveBox.width / 2),
+      moveBox.y + moveBox.height / 2,
+      { steps: 1 }
+    )
+    await sleep(Math.random() * 100)
+    await page.mouse.move(
+      moveBox.x + exactLeft + (moveBox.width / 2) + 2,
+      moveBox.y + moveBox.height / 2,
+      { steps: 1 }
+    )
     await page.mouse.up()
+
+    await sleep(Math.random() * 1000 + 500)
+    await antiSlider(page, config)
   }
 }

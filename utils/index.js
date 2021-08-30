@@ -31,11 +31,11 @@ async function mkdir(dirname, force = false) {
 const log = (msg, type = 'info') => {
   fs.appendFileSync(
     path.join(__dirname, '../log/log.error.txt'),
-    `date:${new Date()}\n${type}:${typeof msg === 'string' ? msg : JSON.stringify(msg)}\n\n\n`,
+    `date: ${new Date()}\n${type}: ${typeof msg === 'string' ? msg : JSON.stringify(msg)}\n\n\n`,
     'utf-8'
   )
 }
-log.error = msg => log(msg, 'error')
+log.error = err => log(err, 'error')
 
 const notEmpty = obj => obj && Object.keys(obj).length > 0
 

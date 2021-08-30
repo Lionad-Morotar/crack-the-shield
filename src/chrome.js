@@ -69,8 +69,8 @@ const createInstance = async () => {
       userDataDir: '../cache',
       args: [
         ...MINARGS,
-        // `--disable-extensions-except=${antiCanvasFPExtPath}`,
-        // `--load-extension=${antiCanvasFPExtPath}`
+        `--disable-extensions-except=${antiCanvasFPExtPath}`,
+        `--load-extension=${antiCanvasFPExtPath}`
       ],
     })
     debugPort = await browser.wsEndpoint()
