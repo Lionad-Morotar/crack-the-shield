@@ -189,7 +189,7 @@ connectDB().then(async mongo => {
   await new Crawler({
     collection: listCollection,
     maxConcurrenceCount: 1,
-    interval: Math.random() * 500 + 50000000,
+    interval: Math.random() * 500 + 500,
   })
     .exec(todos)
     .then(() => {

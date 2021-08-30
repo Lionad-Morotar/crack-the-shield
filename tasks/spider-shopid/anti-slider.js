@@ -25,12 +25,11 @@ const slider_s1 = {
   3: slider_3_s1
 }
 
-const MAX_RETRY = 2
-let retry = 0
+const MAX_RETRY = 3
 
 // 检测验证码并出错重试
-module.exports = async function antiSlider(page, config) {
-  if (retry++ > MAX_RETRY) {
+module.exports = async function antiSlider(page, config, retry) {
+  if ((retry+1) > MAX_RETRY) {
     throw new Error('超过最大验证码次数')
   }
   const checkHasSlider = async () => {
@@ -243,8 +242,8 @@ module.exports = async function antiSlider(page, config) {
       await page.waitForNavigation({ timeout: 6 * 1000 })
       await sleep(500)
     } catch (error) {
-      await antiSlider(page, config)
+      await antiSlider(page, config, retry+1)
     }
-    await antiSlider(page, config)
+    await antiSlider(page, config, retry+1)
   }
 }
