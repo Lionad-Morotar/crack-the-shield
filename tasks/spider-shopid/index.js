@@ -68,6 +68,7 @@ const getPage = async () => {
   await useProxy(page, req => {
     const url = req.url()
     if (
+      url.match(/logo_baixing.png/) ||
       url.match(/title.png/) ||
       url.match(/index.css/) ||
       url.match(/bfjs/) ||
@@ -105,19 +106,27 @@ function getShopListTask(k, v) {
   return {
     id: k,
       async run({ collection }) {
-      let page = await getPage()
+      const page = await getPage()
+      await page.bringToFront()
       try {
+        await sleep(3 * 1000)
         const url = `${config.baseurl}?p=${v}`
         await page.goto(url, { waitUntil: 'domcontentloaded' })
+
+        await sleep(1000 * 1000)
 
         /* 滑块验证 */
         const $slider = await page.evaluate(() => document.querySelector('.verify-img-panel'))
         if ($slider) {
+
+          // 等子滑块加载完毕...
+          await page.evaluateHandle(() => document.querySelector('.verify-sub-block img'))
+
           const sliderImgBase64 = await page.evaluate(async () => (
             await waitUntilPropsLoaded('src', () => {
               const $elm = document.querySelector('.verify-img-panel img')
               return $elm && $elm.getAttribute('src')
-            }))
+            }, 10 * 1000))
           )
 
           // 找到要滑到第几个滑块
@@ -161,7 +170,6 @@ function getShopListTask(k, v) {
           }
 
           // 设置滑块样式以方便图片比较
-          await page.evaluate(async () => await waitUntilLoaded('.verify-sub-block img'))
           const $sliderFloat = await page.evaluateHandle(() => document.querySelector('.verify-sub-block img'))
           await page.evaluate(async $sliderFloat => {
             console.log('$sliderFloat', $sliderFloat)
@@ -283,6 +291,7 @@ function getShopListTask(k, v) {
             moveBox.y + moveBox.height / 2
           )
           await page.mouse.down()
+          await sleep(Math.random() * 500 + 500)
           await page.mouse.move(
             moveBox.x + exactLeft,
             moveBox.y + moveBox.height / 2,
@@ -349,6 +358,8 @@ function getShopListTask(k, v) {
             })
           })
         })
+
+        console.log('[INFO] done one shop-list-task')
 
       } catch (err) {
         console.error(err)

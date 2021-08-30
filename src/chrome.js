@@ -65,8 +65,8 @@ const createInstance = async () => {
       userDataDir: '../cache',
       args: [
         ...MINARGS,
-        `--disable-extensions-except=${antiCanvasFPExtPath}`,
-        `--load-extension=${antiCanvasFPExtPath}`
+        // `--disable-extensions-except=${antiCanvasFPExtPath}`,
+        // `--load-extension=${antiCanvasFPExtPath}`
       ],
     })
     debugPort = await browser.wsEndpoint()
@@ -104,18 +104,52 @@ const useProxy = async (page, proxyReq) => {
   await page.setRequestInterception(true)
   await page.on('request', async req => {
     try {
-      const url = req.url()
+      let url = req.url()
       const resType = req.resourceType()
+      // 本地代理放行
       if (url.includes('192.168')) {
         return req.continue()
       }
+      // 内联图片放行 
+      if (url.includes('base64')) {
+        return req.continue()
+      }
+      // 代理部分静态资源到本地
+      if (url.startsWith('https://file.baixing.net')) {
+        const localBase = 'http://127.0.0.1:9999/'
+        if (url === 'https://file.baixing.net/verifySlide/1.0.4/main.css')
+          url = localBase + 'verifySlide.main.css'
+        if (url === 'https://file.baixing.net/verifySlide/1.0.4/main.js')
+          url = localBase + 'verifySlide.main.js'
+        console.log('[LOCAL]', url)
+        const response = await new Promise((resolve, reject) => {
+          request({
+            url,
+            method: req.method(),
+          }, (err, proxedResponse) => {
+            if (err) {
+              reject(err)
+            } else {
+              resolve(proxedResponse)
+            }
+          })
+        })
+        return req.respond({
+          status: response.statusCode,
+          contentType: response.headers['content-type'],
+          headers: response.headers,
+          body: response.body,
+        })
+      }
+      // 中间件
       if (proxyReq) {
         const continueReq = proxyReq(req)
         if (!continueReq) {
           return
         }
       }
-      if (['document', 'xhr', 'fetch'].includes(resType)) {
+      // 代理请求
+      if (['document', 'xhr'].includes(resType)) {
         const response = await new Promise((resolve, reject) => {
           request({
             // url: 'https://enb6hk1stgczkkc.m.pipedream.net',
@@ -154,7 +188,7 @@ const useProxy = async (page, proxyReq) => {
       }
     } catch (e) {
       console.error('[ERR]', e)
-      req.continue && req.continue()
+      req.continue()
     }
   })
 }

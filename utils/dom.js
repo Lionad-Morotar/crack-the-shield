@@ -57,13 +57,13 @@ const waitUntilLoaded = function () {
 
 // 等待对象上某属性挂载完毕
 const waitUntilPropsLoaded = function() {
-  const fn = (name, objFn) => {
+  const fn = (name, objFn, maxTimeout = 5000) => {
     let tick
     return new Promise((resolve, reject) => {
       const errorTick = setTimeout(() => {
         tick && window.clearTimeout(tick)
         reject('[ERR] not found props', name)
-      }, 5 * 1000)
+      }, maxTimeout)
 
       const re = () => setTimeout(() => {
         const targetObj = objFn || window

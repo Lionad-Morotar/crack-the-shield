@@ -7,6 +7,7 @@
     "download": "node ./command/download.js",
     "open": "node ./command/open.js",
     "kill": "taskkill /f /im chrome.exe",
+    "statics": "http-server ./statics -p9999",
     "db": "mongod --dbpath D:\\@Github\\crack-the-shield\\mongo",
     "spider-shopid:test": "cross-env NODE_ENV=test node ./tasks/spider-shopid/index.js",
     "spider-shopid:prod": "cross-env NODE_ENV=production node ./tasks/spider-shopid/index.js"
