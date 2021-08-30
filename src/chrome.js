@@ -6,6 +6,7 @@ const StealthPlugin = require('puppeteer-extra-plugin-stealth')
 // const UAPlugin = require('puppeteer-extra-plugin-anonymize-ua')
 
 const { log } = require('../utils')
+const { getProxy } = require('./private/dailiyun')
 const { proxyURL, getAuthorization } = require('./private/xdaili')
 
 puppeteer.use(StealthPlugin())
@@ -102,6 +103,8 @@ const getInstance = async () => {
  **/
 const useProxy = async (page, proxyReq) => {
   await page.setRequestInterception(true)
+  const proxy = await getProxy()
+  console.log('[INFO] proxy', proxy)
   await page.on('request', async req => {
     try {
       let url = req.url()
@@ -150,24 +153,16 @@ const useProxy = async (page, proxyReq) => {
       }
       // 代理请求
       if (['document', 'xhr'].includes(resType)) {
-        const response = await new Promise((resolve, reject) => {
+        const response = await new Promise(async (resolve, reject) => {
           request({
-            // url: 'https://enb6hk1stgczkkc.m.pipedream.net',
             url,
             method: req.method(),
             strictSSL: false,
             followRedirect: false,
-            headers: {
-              ...req.headers(),
-              'proxy-authorization': getAuthorization(),
-              'Proxy-Authorization': getAuthorization()
-            },
-            proxyHeaderWhiteList: [
-              'proxy-authorization',
-              'Proxy-Authorization'
-            ],
+            headers: req.headers(),
             body: req.postData(),
-            proxy: proxyURL,
+            proxy,
+            tunnel: true
           }, (err, proxedResponse) => {
             if (err) {
               reject(err)
@@ -188,7 +183,8 @@ const useProxy = async (page, proxyReq) => {
       }
     } catch (e) {
       console.error('[ERR]', e)
-      req.continue()
+      // 不要暴露真实IP
+      // req.continue()
     }
   })
 }

@@ -43,8 +43,8 @@ const config = isProd
     useLocalSliderNum: true,
     dbname: 'spider-test',
     // baseurl: 'http://192.168.1.7:8080/spider-main/'
-    baseurl: 'http://192.168.1.7:8080/spider-slider'
-    // baseurl: 'https://www.ipaddress.com'
+    // baseurl: 'http://192.168.1.7:8080/spider-slider'
+    baseurl: 'https://www.ipaddress.com'
     // baseurl: 'https://www.baidu.com'
   }
 
