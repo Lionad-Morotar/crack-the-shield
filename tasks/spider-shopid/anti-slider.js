@@ -240,8 +240,12 @@ module.exports = async function antiSlider(page, config, retry) {
 
     // 等待页面跳转（或重试验证码）
     try {
-      await page.waitForNavigation({ timeout: 6.5 * 1000 })
-      await sleep(500)
+      await Promise.all([
+        page.waitForNavigation({ timeout: 6.5 * 1000 * page._timeRatio }),
+        page.waitForResponse(resp => {
+          return resp.url() === 'https://spider.test.baixing.cn/shield/get' && resp.status() === 200
+        })
+      ])
     } catch (error) {
       await antiSlider(page, config, retry+1)
     }

@@ -187,6 +187,9 @@ const useProxy = async (page, proxyReq) => {
       }
     } catch (e) {
       console.error('[ERR]', e)
+      if ((e.message || '').match(/tunneling socket/)) {
+        throw new Error('代理异常')
+      }
       // 不要暴露真实IP
       // req.continue()
     }

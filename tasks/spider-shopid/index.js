@@ -29,6 +29,7 @@ const browser = (async () => await getBrowser())()
 const getPage = async () => {
   const instance = await browser
   const page = await instance.newPage()
+  page._timeRatio = 2
   await page.setExtraHTTPHeaders({ spider: 'yiguang' })
   await page.evaluateOnNewDocument(waitUntil)
   await page.evaluateOnNewDocument(waitUntilLoaded)
