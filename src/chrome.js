@@ -5,7 +5,7 @@ const puppeteer = require('puppeteer-extra')
 const StealthPlugin = require('puppeteer-extra-plugin-stealth')
 // const UAPlugin = require('puppeteer-extra-plugin-anonymize-ua')
 
-const { log } = require('../utils')
+const { log, dir } = require('../utils')
 const { getProxy } = require('./private/dailiyun')
 const { proxyURL, getAuthorization } = require('./private/xdaili')
 
@@ -14,6 +14,9 @@ puppeteer.use(StealthPlugin())
 
 // 混淆指纹
 antiCanvasFPExtPath = path.join(__dirname, '../extension/anti-canvas-fp')
+
+const verifySlideMainCSS = fs.readFileSync(dir('statics/verifySlide.main.css'))
+const verifySlideMainJS = fs.readFileSync(dir('statics/verifySlide.main.js'))
 
 const MAX = 1
 const DEBUG_POINT_POOL = []
@@ -119,29 +122,15 @@ const useProxy = async (page, proxyReq) => {
       }
       // 代理部分静态资源到本地
       if (url.startsWith('https://file.baixing.net')) {
-        const localBase = 'http://127.0.0.1:9999/'
+        let body
         if (url === 'https://file.baixing.net/verifySlide/1.0.4/main.css')
-          url = localBase + 'verifySlide.main.css'
+          body = verifySlideMainCSS
         if (url === 'https://file.baixing.net/verifySlide/1.0.4/main.js')
-          url = localBase + 'verifySlide.main.js'
-        console.log('[LOCAL]', url)
-        const response = await new Promise((resolve, reject) => {
-          request({
-            url,
-            method: req.method(),
-          }, (err, proxedResponse) => {
-            if (err) {
-              reject(err)
-            } else {
-              resolve(proxedResponse)
-            }
-          })
-        })
+          body = verifySlideMainJS
         return req.respond({
-          status: response.statusCode,
-          contentType: response.headers['content-type'],
-          headers: response.headers,
-          body: response.body,
+          status: 200,
+          headers: req.headers,
+          body: body.toString(),
         })
       }
       // 中间件

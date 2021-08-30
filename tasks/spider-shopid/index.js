@@ -9,7 +9,7 @@ const connectDB = require('../../src/connect-db')
 const Crawler = require('../../src/crawler')
 const { getBrowser, useProxy, utils } = require('../../src/chrome')
 const { findTroughs, sleep } = require('../../utils')
-const { waitUntilLoaded, waitUntilPropsLoaded } = require('../../utils/dom')
+const { waitUntil, waitUntilLoaded, waitUntilPropsLoaded } = require('../../utils/dom')
 const pageMap = require('./page.json')
 
 const slider_1_raw = fs.readFileSync(path.join(__dirname, './sliders/slider-1-raw.png'))
@@ -33,7 +33,6 @@ const slider_s1 = {
 }
 
 const isProd = process.env.NODE_ENV === 'production'
-const noCloseForDebug = isProd ? false : true
 const config = isProd
   ? {
     dbname: 'spider',
@@ -43,8 +42,8 @@ const config = isProd
     useLocalSliderNum: true,
     dbname: 'spider-test',
     // baseurl: 'http://192.168.1.7:8080/spider-main/'
-    // baseurl: 'http://192.168.1.7:8080/spider-slider'
-    baseurl: 'https://www.ipaddress.com'
+    baseurl: 'http://192.168.1.7:8080/spider-slider'
+    // baseurl: 'https://www.ipaddress.com'
     // baseurl: 'https://www.baidu.com'
   }
 
@@ -53,8 +52,8 @@ const browser = (async () => await getBrowser())()
 const getPage = async () => {
   const instance = await browser
   const page = await instance.newPage()
-  await page.setDefaultTimeout(60 * 1000)
   await page.setExtraHTTPHeaders({ spider: 'yiguang' })
+  await page.evaluateOnNewDocument(waitUntil)
   await page.evaluateOnNewDocument(waitUntilLoaded)
   await page.evaluateOnNewDocument(waitUntilPropsLoaded)
   await page.setViewport(utils.setViewport())
@@ -109,18 +108,22 @@ function getShopListTask(k, v) {
       const page = await getPage()
       await page.bringToFront()
       try {
-        await sleep(3 * 1000)
         const url = `${config.baseurl}?p=${v}`
+        await sleep(2000)
         await page.goto(url, { waitUntil: 'domcontentloaded' })
-
-        await sleep(1000 * 1000)
 
         /* 滑块验证 */
         const $slider = await page.evaluate(() => document.querySelector('.verify-img-panel'))
         if ($slider) {
 
           // 等子滑块加载完毕...
-          await page.evaluateHandle(() => document.querySelector('.verify-sub-block img'))
+          await page.evaluate(async () => {
+            await waitUntil(() => {
+              const $elm = document.querySelector('.verify-sub-block img')
+              console.log('$elm.SRC.length', $elm.getAttribute('src').length)
+              return $elm && $elm.getAttribute('src').length > 50
+            })
+          })
 
           const sliderImgBase64 = await page.evaluate(async () => (
             await waitUntilPropsLoaded('src', () => {
@@ -343,7 +346,7 @@ function getShopListTask(k, v) {
         )
 
         // 储存列表页面数据
-        const data = { _id: k, url }
+        const data = { _id: k, url, store: shops }
         await new Promise((resolve, reject) => {
           collection.deleteMany({ _id: k }, function (err) {
             if (err) {
@@ -362,14 +365,16 @@ function getShopListTask(k, v) {
         console.log('[INFO] done one shop-list-task')
 
       } catch (err) {
-        console.error(err)
+        fs.appendFileSync(
+          path.join(__dirname, './log.error.txt'),
+          JSON.stringify(err) + '\n\n',
+          'utf-8'
+        )
         this.addTask(getShopListTask(k, v))
       } finally {
         await new Promise(resolve => setTimeout(resolve, Math.random() * 500))
-        if (!noCloseForDebug) {
-          // await page.close()
-          // await browser.close()
-        }
+        await page.close()
+        // await browser.close()
       }
     }
   }
@@ -398,7 +403,7 @@ connectDB().then(async mongo => {
   await new Crawler({
     collection: listCollection,
     maxConcurrenceCount: 1,
-    interval: Math.random() * 500 + 500000,
+    interval: Math.random() * 500 + 50000000,
   })
     .exec(todos)
     .then(() => {

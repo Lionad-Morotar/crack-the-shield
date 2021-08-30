@@ -56,7 +56,7 @@ const waitUntilLoaded = function () {
 }
 
 // 等待对象上某属性挂载完毕
-const waitUntilPropsLoaded = function() {
+const waitUntilPropsLoaded = function () {
   const fn = (name, objFn, maxTimeout = 5000) => {
     let tick
     return new Promise((resolve, reject) => {
@@ -89,8 +89,39 @@ const waitUntilPropsLoaded = function() {
   }
 }
 
+// 等待对象上某属性挂载完毕
+const waitUntil = function () {
+  const fn = (checkFn, maxTimeout = 5000) => {
+    let tick
+    return new Promise((resolve, reject) => {
+      const errorTick = setTimeout(() => {
+        tick && window.clearTimeout(tick)
+        reject('[ERR] wait timeout')
+      }, maxTimeout)
+
+      const re = () => setTimeout(() => {
+        const res = checkFn()
+        if (res) {
+          window.clearTimeout(errorTick)
+          resolve(res)
+        } else {
+          tick = re()
+        }
+      }, 25)
+
+      tick = re()
+    })
+  }
+  if (window) {
+    window.waitUntil = fn
+  } else {
+    return fn
+  }
+}
+
 module.exports = {
   styles,
+  waitUntil,
   waitUntilLoaded,
   waitUntilPropsLoaded
 }
