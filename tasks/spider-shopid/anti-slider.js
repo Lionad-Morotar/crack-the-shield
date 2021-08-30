@@ -19,6 +19,8 @@ module.exports = async function antiSlider(page, config, retry) {
   const $slider = await checkHasSlider()
   if ($slider) {
 
+    throw new Error('跳过验证码！')
+
     // 等子滑块加载完毕...
     await page.evaluate(async () => {
       await waitUntil(() => {
@@ -72,9 +74,10 @@ module.exports = async function antiSlider(page, config, retry) {
     const panelImg_05_Base64 = await $panel_05.screenshot({
       type: 'jpeg'
     })
-    await page.evaluate(async $sliderFloat => {
-      $sliderFloat.setAttribute('style', 'filter:grayscale(1) brightness(.95) drop-shadow(0 0 2px #888);left: 0px')
-    }, $sliderFloat)
+    const sliderFloatStyle = `filter: grayscale(1) brightness(0.95)`
+    await page.evaluate(async ($sliderFloat, sliderFloatStyle) => {
+      $sliderFloat.setAttribute('style', `${sliderFloatStyle};left: 0px`)
+    }, $sliderFloat, sliderFloatStyle)
     await sleep(100)
 
     // 用 15px 的速度取得局部最优解
@@ -135,6 +138,7 @@ module.exports = async function antiSlider(page, config, retry) {
     } else {
       throw new Error('波谷不够：' + res15px.map(x => x.diff).join(','))
     }
+    log('取得大致结果：' + res15px.map(x => x.diff).join(','))
 
     // 遍历取得最优解
 
@@ -151,13 +155,13 @@ module.exports = async function antiSlider(page, config, retry) {
     const panelImg_10_Base64 = await $panel_10.screenshot({
       type: 'jpeg'
     })
-    await page.evaluate(async $sliderFloat => {
-      $sliderFloat.setAttribute('style', 'filter:grayscale(1) brightness(.95) drop-shadow(0 0 2px #888);left: 0px')
-    }, $sliderFloat)
+    await page.evaluate(async ($sliderFloat, sliderFloatStyle) => {
+      $sliderFloat.setAttribute('style', `${sliderFloatStyle};left: 0px`)
+    }, $sliderFloat, sliderFloatStyle)
     await sleep(100)
 
     const mudLeft = res15px3left[num - 1].left
-    left = mudLeft - 5
+    left = mudLeft - 12
     const res1px = []
     while (left <= mudLeft + 12) {
       await page.evaluate(async ($sliderFloat, left) => {
@@ -216,6 +220,7 @@ module.exports = async function antiSlider(page, config, retry) {
       { steps: 1 }
     )
     await page.mouse.up()
+
     log(`向右移动：${exactLeft}px`)
     const moveResponse = await page.waitForResponse(res => {
       const validRes = res.url().length <= 400 && res.url().match(/check/)

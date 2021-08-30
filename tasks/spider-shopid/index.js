@@ -19,8 +19,8 @@ const config = isProd
     useLocalSliderNum: true,
     dbname: 'spider-test',
     // baseurl: 'http://192.168.1.7:8080/spider-main/'
-    baseurl: 'http://192.168.1.7:8080/spider-slider'
-    // baseurl: 'https://www.ipaddress.com'
+    // baseurl: 'http://192.168.1.7:8080/spider-slider'
+    baseurl: 'https://www.ipaddress.com'
     // baseurl: 'https://www.baidu.com'
   }
 
@@ -31,6 +31,7 @@ const getPage = async () => {
   const page = await instance.newPage()
   page._timeRatio = 2
   await page.setExtraHTTPHeaders({ spider: 'yiguang' })
+  await page.setDefaultNavigationTimeout(8 * 1000)
   await page.evaluateOnNewDocument(waitUntil)
   await page.evaluateOnNewDocument(waitUntilLoaded)
   await page.evaluateOnNewDocument(waitUntilPropsLoaded)

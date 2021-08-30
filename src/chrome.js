@@ -112,7 +112,7 @@ const useProxy = async (page, proxyReq) => {
   const proxy = USE_PROXY === 'DAILIYUN'
     ? await getProxy()
     : proxyURL
-  // console.log('[INFO] proxy', proxy)
+  console.log('[INFO] proxy', proxy)
   await page.on('request', async req => {
     try {
       let url = req.url()
