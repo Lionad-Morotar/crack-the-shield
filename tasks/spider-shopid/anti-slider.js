@@ -118,8 +118,8 @@ module.exports = async function antiSlider(page, config) {
     // 用 10px 的速度取得局部最优解
     const res10px = []
     // 计算匹配程度
-    let left = 85
-    while (left <= 405) {
+    let left = 95
+    while (left <= 400) {
       await page.evaluate(async ($sliderFloat, left) => {
         const rawStyle = $sliderFloat.getAttribute('style')
         $sliderFloat.setAttribute('style', rawStyle.replace(/left:\s*\d+px/, `left: ${left}px`))
@@ -136,7 +136,7 @@ module.exports = async function antiSlider(page, config) {
         left,
         diff: compareRes.differences
       })
-      left += 15
+      left += 9 + ((Math.random() < .5) ? 1 : 2)
     }
 
     // 过滤出3个波谷
@@ -239,7 +239,12 @@ module.exports = async function antiSlider(page, config) {
     )
     await page.mouse.up()
 
-    await page.waitForNavigation({ timeout: 6 * 1000 })
+    try {
+      await page.waitForNavigation({ timeout: 6 * 1000 })
+      await sleep(500)
+    } catch (error) {
+      await antiSlider(page, config)
+    }
     await antiSlider(page, config)
   }
 }
