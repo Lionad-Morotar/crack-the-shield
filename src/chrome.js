@@ -107,7 +107,7 @@ const getInstance = async () => {
 const useProxy = async (page, proxyReq) => {
   await page.setRequestInterception(true)
   const proxy = await getProxy()
-  console.log('[INFO] proxy', proxy)
+  // console.log('[INFO] proxy', proxy)
   await page.on('request', async req => {
     try {
       let url = req.url()
@@ -156,7 +156,7 @@ const useProxy = async (page, proxyReq) => {
             if (err) {
               reject(err)
             } else {
-              console.log(`[INFO] proxy response code`, proxedResponse.statusCode)
+              console.log(`[INFO] proxy res`, proxedResponse.statusCode)
               resolve(proxedResponse)
             }
           })
