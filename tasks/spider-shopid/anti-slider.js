@@ -217,24 +217,25 @@ module.exports = async function antiSlider(page, config, retry) {
     )
     await page.mouse.up()
     log(`向右移动：${exactLeft}px`)
+    const moveResponse = await page.waitForResponse(res => {
+      const validRes = res.url().length <= 400 && res.url().match(/check/)
+      if (validRes) log('移动结果：' + res.status())
+      return validRes && res.status()
+    })
 
     // 等待页面跳转（或重试验证码）
-    try {
-      await Promise.all([
-        page.waitForNavigation({ timeout: 6.5 * 1000 * page._timeRatio }),
-        Promise.all([
-          page.waitForResponse(resp => {
-            return resp.url().length <= 400 && resp.url().match(/check/)
-          }),
-          page.waitForResponse(resp => {
-            return resp.url().length <= 400 && resp.url().match(/get/) && resp.status() === 200
-          })
-        ])
-      ])
-    } catch (error) {
-      await antiSlider(page, config, retry+1)
+    if (moveResponse.status() === 400) {
+      await page.waitForResponse(res => {
+        const validRes = res.url().match(/get/) && res.status() === 200
+        if (validRes) log('重新获取验证码：' + res.status())
+        return validRes && res.status()
+      })
+      await sleep(200)
+      await antiSlider(page, config, retry + 1)
+    } else {
+      await page.waitForNavigation({ timeout: 15 * 1000 * page._timeRatio })
     }
-    await antiSlider(page, config, retry+1)
+
   } else {
     return 'skip'
   }
