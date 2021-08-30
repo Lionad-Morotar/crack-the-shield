@@ -219,11 +219,11 @@ module.exports = async function antiSlider(page, config) {
       moveBox.y + moveBox.height / 2
     )
     await page.mouse.down()
-    await sleep(Math.random() * 500 + 500)
+    await sleep(Math.random() * 500 + 300)
     await page.mouse.move(
       moveBox.x + exactLeft,
       moveBox.y + moveBox.height / 2,
-      { steps: 8 }
+      { steps: 12 }
     )
     await sleep(Math.random() * 100)
     await page.mouse.move(
@@ -239,7 +239,7 @@ module.exports = async function antiSlider(page, config) {
     )
     await page.mouse.up()
 
-    await sleep(Math.random() * 1000 + 500)
+    await page.waitForNavigation({ timeout: 6 * 1000 })
     await antiSlider(page, config)
   }
 }
