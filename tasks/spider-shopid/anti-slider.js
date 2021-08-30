@@ -5,26 +5,6 @@ const ocr = require('../../plugins/ocr')
 const rembrandt = require('../../plugins/rembrandt')
 const { findTroughs, sleep, log } = require('../../utils')
 
-const slider_1_raw = fs.readFileSync(path.join(__dirname, './sliders/slider-1-raw.png'))
-const slider_2_raw = fs.readFileSync(path.join(__dirname, './sliders/slider-2-raw.png'))
-const slider_3_raw = fs.readFileSync(path.join(__dirname, './sliders/slider-3-raw.png'))
-const slider_1_s1 = fs.readFileSync(path.join(__dirname, './sliders/slider-1-s1.png'))
-const slider_2_s1 = fs.readFileSync(path.join(__dirname, './sliders/slider-2-s1.png'))
-const slider_3_s1 = fs.readFileSync(path.join(__dirname, './sliders/slider-3-s1.png'))
-const slider_1_s05 = fs.readFileSync(path.join(__dirname, './sliders/slider-1-s05.png'))
-const slider_2_s05 = fs.readFileSync(path.join(__dirname, './sliders/slider-2-s05.png'))
-const slider_3_s05 = fs.readFileSync(path.join(__dirname, './sliders/slider-3-s05.png'))
-const slider_s05 = {
-  1: slider_1_s05,
-  2: slider_2_s05,
-  3: slider_3_s05
-}
-const slider_s1 = {
-  1: slider_1_s1,
-  2: slider_2_s1,
-  3: slider_3_s1
-}
-
 const MAX_RETRY = 3
 
 // 检测验证码并出错重试
@@ -69,56 +49,39 @@ module.exports = async function antiSlider(page, config, retry) {
       log('移动至滑块：' + num)
     }
 
-    // 找到是哪种类型的 slider
-    const $sliderImg = await page.evaluateHandle(() => document.querySelector('.verify-img-panel img'))
-    const sliderImg = await $sliderImg.screenshot()
-    const typeRes = await Promise.all([
-      rembrandt({
-        imageA: sliderImg,
-        imageB: slider_1_raw
-      }),
-      rembrandt({
-        imageA: sliderImg,
-        imageB: slider_2_raw
-      }),
-      rembrandt({
-        imageA: sliderImg,
-        imageB: slider_3_raw
-      }),
-    ])
-    const minDifferences = Math.min(...typeRes.map(x => x.differences))
-    const sliderTemplateID = typeRes.findIndex(x => x.differences === minDifferences) + 1
-    if (sliderTemplateID) {
-      log('滑块背景类型：' + sliderTemplateID)
-    } else {
-      throw new Error('没有找到背景类型')
-    }
-
-    // 设置滑块样式以方便图片比较
-    const $sliderFloat = await page.evaluateHandle(() => document.querySelector('.verify-sub-block img'))
-    await page.evaluate(async $sliderFloat => {
-      $sliderFloat.setAttribute('style', 'filter:grayscale(1) brightness(.95) drop-shadow(0 0 2px #888);left: 0px')
-    }, $sliderFloat)
-
     // 设置滑块图片样式以方便图片比较
     const $sliderBG = await page.evaluateHandle(() => document.querySelector('.verify-img-panel .block-bg'))
     await page.evaluate(async $sliderBG => {
       $sliderBG.setAttribute('style', 'filter:grayscale(1)')
     }, $sliderBG)
 
-    // 设置缩放（加速）
+    // 设置缩放（加速图片匹配）
     const $slider = await page.evaluateHandle(() => document.querySelector('.verify-slide'))
     await page.evaluate(async $slider => {
       $slider.setAttribute('style', 'transform:scale(0.5)')
     }, $slider)
-    await sleep(500)
+    await sleep(100)
 
+    // 保存基准图片
+    const $sliderFloat = await page.evaluateHandle(() => document.querySelector('.verify-sub-block img'))
+    await page.evaluate(async $sliderFloat => {
+      $sliderFloat.setAttribute('style', 'opacity: 0')
+    }, $sliderFloat)
+    await sleep(100)
+    const $panel_05 = await page.evaluateHandle(() => document.querySelector('.verify-img-panel'))
+    const panelImg_05_Base64 = await $panel_05.screenshot({
+      type: 'jpeg'
+    })
+    await page.evaluate(async $sliderFloat => {
+      $sliderFloat.setAttribute('style', 'filter:grayscale(1) brightness(.95) drop-shadow(0 0 2px #888);left: 0px')
+    }, $sliderFloat)
+    await sleep(100)
 
-    // 用 10px 的速度取得局部最优解
-    const res10px = []
+    // 用 15px 的速度取得局部最优解
+    const res15px = []
     // 计算匹配程度
-    let left = 95
-    while (left <= 400) {
+    let left = 75
+    while (left <= 410) {
       await page.evaluate(async ($sliderFloat, left) => {
         const rawStyle = $sliderFloat.getAttribute('style')
         $sliderFloat.setAttribute('style', rawStyle.replace(/left:\s*\d+px/, `left: ${left}px`))
@@ -129,31 +92,31 @@ module.exports = async function antiSlider(page, config, retry) {
       })
       const compareRes = await rembrandt({
         imageA: panelImgBase64,
-        imageB: slider_s05[sliderTemplateID]
+        imageB: panelImg_05_Base64
       })
-      res10px.push({
+      res15px.push({
         left,
         diff: compareRes.differences
       })
-      left += 9 + ((Math.random() < .5) ? 1 : 2)
+      left += 15
     }
 
     // 过滤出3个波谷
-    let res10px3left
-    const res10pxThroughIdxs = findTroughs(res10px.map(x => x.diff))
-    if (res10pxThroughIdxs.length === 3) {
-      res10px3left = res10pxThroughIdxs.map(x => res10px[x])
-    } else if (res10pxThroughIdxs.length > 3) {
+    let res15px3left
+    const res15pxThroughIdxs = findTroughs(res15px.map(x => x.diff))
+    if (res15pxThroughIdxs.length === 3) {
+      res15px3left = res15pxThroughIdxs.map(x => res15px[x])
+    } else if (res15pxThroughIdxs.length > 3) {
       // 类聚阈值从 1 开始扩增直到只留下 3 个波谷
       // @see 调试可使用网站 https://echarts.apache.org/examples/zh/editor.html?c=line-simple
       let group = [], count = 10, threshold = 0
       while (count && (group.length !== 3)) {
         count--
         threshold++
-        group = res10pxThroughIdxs.reduce((h, c) => {
+        group = res15pxThroughIdxs.reduce((h, c) => {
           const find = h.find(x => Math.abs(x - c) <= threshold)
           if (find) {
-            const leftItem = res10px[find].diff < res10px[c].diff ? find : c
+            const leftItem = res15px[find].diff < res15px[c].diff ? find : c
             if (leftItem === c) {
               h.splice(h.findIndex(x => x === find), 1, c)
             }
@@ -164,23 +127,39 @@ module.exports = async function antiSlider(page, config, retry) {
         }, [])
       }
       if (!count) {
-        throw new Error('没有找到波谷：' + res10px.map(x => x.diff).join(','))
+        throw new Error('没有找到波谷：' + res15px.map(x => x.diff).join(','))
       }
       if (group.length === 3) {
-        res10px3left = group.map(x => res10px[x])
+        res15px3left = group.map(x => res15px[x])
       }
     } else {
-      throw new Error('波谷不够：' + res10px.map(x => x.diff).join(','))
+      throw new Error('波谷不够：' + res15px.map(x => x.diff).join(','))
     }
 
     // 遍历取得最优解
+
+    // 取消缩放
     await page.evaluate(async $slider => {
       $slider.setAttribute('style', '')
     }, $slider)
-    const mudLeft = res10px3left[num - 1].left
-    left = mudLeft - 4
+
+    await page.evaluate(async $sliderFloat => {
+      $sliderFloat.setAttribute('style', 'opacity: 0')
+    }, $sliderFloat)
+    await sleep(100)
+    const $panel_10 = await page.evaluateHandle(() => document.querySelector('.verify-img-panel'))
+    const panelImg_10_Base64 = await $panel_10.screenshot({
+      type: 'jpeg'
+    })
+    await page.evaluate(async $sliderFloat => {
+      $sliderFloat.setAttribute('style', 'filter:grayscale(1) brightness(.95) drop-shadow(0 0 2px #888);left: 0px')
+    }, $sliderFloat)
+    await sleep(100)
+
+    const mudLeft = res15px3left[num - 1].left
+    left = mudLeft - 5
     const res1px = []
-    while (left <= mudLeft + 7) {
+    while (left <= mudLeft + 12) {
       await page.evaluate(async ($sliderFloat, left) => {
         const rawStyle = $sliderFloat.getAttribute('style')
         $sliderFloat.setAttribute('style', rawStyle.replace(/left:\s*\d+px/, `left: ${left}px`))
@@ -191,13 +170,13 @@ module.exports = async function antiSlider(page, config, retry) {
       })
       const compareRes = await rembrandt({
         imageA: panelImgBase64,
-        imageB: slider_s1[sliderTemplateID]
+        imageB: panelImg_10_Base64
       })
       res1px.push({
         left,
         diff: compareRes.differences
       })
-      left += 1
+      left += 2
     }
     const min1pxDiff = Math.min(...res1px.map(x => x.diff))
     const exactLeft = res1px.find(x => x.diff === min1pxDiff).left
@@ -218,33 +197,39 @@ module.exports = async function antiSlider(page, config, retry) {
       moveBox.y + moveBox.height / 2
     )
     await page.mouse.down()
-    await sleep(Math.random() * 500 + 300)
+    await sleep(Math.random() * 550 + 300)
     await page.mouse.move(
       moveBox.x + exactLeft,
       moveBox.y + moveBox.height / 2,
-      { steps: 12 }
+      { steps: 8 }
     )
-    await sleep(Math.random() * 100)
+    await sleep(Math.random() * 50)
     await page.mouse.move(
       moveBox.x + exactLeft + (moveBox.width / 2),
       moveBox.y + moveBox.height / 2,
       { steps: 1 }
     )
-    await sleep(Math.random() * 100)
+    await sleep(Math.random() * 50)
     await page.mouse.move(
-      moveBox.x + exactLeft + (moveBox.width / 2) + 2,
+      moveBox.x + exactLeft + (moveBox.width / 2),
       moveBox.y + moveBox.height / 2,
       { steps: 1 }
     )
     await page.mouse.up()
+    log(`向右移动：${exactLeft}px`)
 
     // 等待页面跳转（或重试验证码）
     try {
       await Promise.all([
         page.waitForNavigation({ timeout: 6.5 * 1000 * page._timeRatio }),
-        page.waitForResponse(resp => {
-          return resp.url() === 'https://spider.test.baixing.cn/shield/get' && resp.status() === 200
-        })
+        Promise.all([
+          page.waitForResponse(resp => {
+            return resp.url().length <= 400 && resp.url().match(/check/)
+          }),
+          page.waitForResponse(resp => {
+            return resp.url().length <= 400 && resp.url().match(/get/) && resp.status() === 200
+          })
+        ])
       ])
     } catch (error) {
       await antiSlider(page, config, retry+1)
