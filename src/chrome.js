@@ -89,7 +89,7 @@ const createInstance = async () => {
 // 如果缓存池有空闲，则从缓存池中取浏览器实例
 const getInstance = async () => {
   let chrome = null
-  // TODO check busy
+  // TODO 多浏览器实例
   try {
     const port = DEBUG_POINT_POOL.find(x => x)
     if (port) {
@@ -138,7 +138,9 @@ const useProxy = async (page, proxyReq) => {
     : USE_PROXY === 'DAILIYUN'
       ? await getProxy()
       : proxyURL
-  console.log('[INFO] proxy', proxy)
+  if (proxy) {
+    log('[INFO] 页面使用代理：' + proxy)
+  }
   await page.on('request', async req => {
     try {
       let url = req.url()
@@ -193,12 +195,14 @@ const useProxy = async (page, proxyReq) => {
             body: req.postData(),
             proxy,
             tunnel: true
-          }, (err, proxedResponse) => {
+          }, (err, response) => {
             if (err) {
               reject(err)
             } else {
-              console.log(`[INFO] proxy res`, proxedResponse.statusCode)
-              resolve(proxedResponse)
+              if (proxy) {
+                console.log(`[INFO] ProxyResCode`, response.statusCode)
+              }
+              resolve(response)
             }
           })
         })

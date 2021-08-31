@@ -277,10 +277,10 @@ connectDB().then(async mongo => {
   })
     .exec(todos)
     .then(() => {
-      log(`task done`)
+      log(`[TASK DONE]`)
     })
     .catch(error => {
-      log.error(`task error ${error.message}`)
+      log.error(`[TASK ERROR] ${error.message}`)
     })
 
 })
