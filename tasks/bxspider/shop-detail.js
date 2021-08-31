@@ -133,14 +133,13 @@ function createShopDetailTask(shop) {
         const $document = await page.evaluateHandle(() => document)
 
         /* 滑块验证 */
-        await sleep(1000 * 1000)
-        // const sliderRes = await antiSlider(page, config)
-        // if (isPageUsed) {
-        //   if (sliderRes !== 'skip') {
-        //     isPageUsed
-        //   }
-        //   page._noUseMore = false
-        // }
+        const sliderRes = await antiSlider(page, config)
+        if (isPageUsed) {
+          if (sliderRes !== 'skip') {
+            isPageUsed
+          }
+          page._noUseMore = false
+        }
 
         // 等待 bfjs
         const cookie = await page.waitForFunction(() => document.cookie)
@@ -191,34 +190,35 @@ function createShopDetailTask(shop) {
         data.owner = owner
 
         // 获取手机号
-        // TODO alert if not match
-        const mobile = await page.evaluate(() => Promise.race([
-          new Promise(resolve => {
-            $.ajax({
-              url: '/detail/' + uid + '/mobile',
-              success(res) {
-                const decodeMobile = (base64) => {
-                  let mobile = ''
-                  const numStr = window.atob(base64)
-                  for (let i = 0; i < numStr.length; i++) {
-                    mobile += String.fromCharCode(
-                      numStr.charCodeAt(i) - 10
-                    )
-                  }
-                  return mobile
+        const mobileRaw = await page.evaluate(() => document.querySelector('#phone-number').innerText.split('*')[0])
+        const mobile = await page.evaluate((cookie) => new Promise(resolve => {
+          console.log('[INFO] cookie', cookie)
+          document.cookie = cookie
+          $.ajax({
+            url: '/detail/' + uid + '/mobile',
+            xhrFields: {
+              withCredentials: true
+            },
+            success(res) {
+              const decodeMobile = (base64) => {
+                let mobile = ''
+                const numStr = window.atob(base64)
+                for (let i = 0; i < numStr.length; i++) {
+                  mobile += String.fromCharCode(
+                    numStr.charCodeAt(i) - 10
+                  )
                 }
-                const mobile = decodeMobile(res.data)
-                resolve(mobile)
+                return mobile
               }
-            })
-          }),
-          new Promise(resolve => {
-            setTimeout(() => {
-              console.log('[INFO] get owner and mobile failed')
-              resolve('-')
-            }, (1000 * 5))
+              const mobile = decodeMobile(res.data)
+              resolve(mobile)
+            }
           })
-        ]))
+        }), cookie)
+        log(`${mobile} VS ${mobileRaw}`)
+        if (!mobile.startsWith(mobileRaw)) {
+          await sleep(3000 * 30000)
+        }
         data.mobile = mobile
 
         // 热线
