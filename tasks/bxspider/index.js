@@ -30,7 +30,10 @@ const getPage = async () => {
   const instance = await browser
   const page = await instance.newPage()
   page._timeRatio = 2
-  await page.setExtraHTTPHeaders({ spider: 'yiguang' })
+  await page.setExtraHTTPHeaders({
+    spider: 'yiguang',
+    'Accept-Language': 'zh-CN,zh;q=0.9,en-US;q=0.8,en;'
+  })
   await page.setDefaultNavigationTimeout(8 * 1000)
   await page.evaluateOnNewDocument(waitUntil)
   await page.evaluateOnNewDocument(waitUntilLoaded)

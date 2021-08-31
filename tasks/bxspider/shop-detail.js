@@ -13,7 +13,6 @@ const { dir, mkdir, sleep, filterSpace, log } = require('../../utils')
 const { waitUntil, waitUntilLoaded, waitUntilPropsLoaded, styles } = require('../../utils/dom')
 
 const preloadFile = fs.readFileSync(dir('src/preload.js'), 'utf8')
-const socketIOFile = fs.readFileSync(dir('statics/socket.io.min.js'), 'utf8')
 
 const antiSlider = require('./anti-slider.js')
 
@@ -113,20 +112,21 @@ function createShopDetailTask(shop) {
         !isPageUsed && (await sleep(1000))
         await page.setExtraHTTPHeaders({
           spider: 'yiguang',
-          referer: 'https://spider.test.baixing.cn/'
+          referer: 'https://spider.test.baixing.cn/',
+          'Accept-Language': 'zh-CN,zh;q=0.9,en-US;q=0.8,en;'
         })
         await page.goto(url, { waitUntil: 'domcontentloaded' })
         await page.bringToFront()
         const $document = await page.evaluateHandle(() => document)
 
         /* 滑块验证 */
-        // const sliderRes = await antiSlider(page, config)
-        // if (isPageUsed) {
-        //   if (sliderRes !== 'skip') {
-        //     isPageUsed
-        //   }
-        //   page._noUseMore = false
-        // }
+        const sliderRes = await antiSlider(page, config)
+        if (isPageUsed) {
+          if (sliderRes !== 'skip') {
+            isPageUsed
+          }
+          page._noUseMore = false
+        }
 
         // 等待 bfjs
         const cookie = await page.waitForFunction(() => document.cookie)
@@ -150,7 +150,8 @@ function createShopDetailTask(shop) {
             transports: ['websocket'],
             extraHeaders: {
               Cookie: cookie,
-              spider: 'yiguang'
+              spider: 'yiguang',
+              'Accept-Language': 'zh-CN,zh;q=0.9,en-US;q=0.8,en;'
             }
           }
           const ws = io('wss://spider.test.baixing.cn', options)
@@ -176,6 +177,7 @@ function createShopDetailTask(shop) {
         data.owner = owner
 
         // 获取手机号
+        // FIXME on https://spider.test.baixing.cn/detail/f81db0d49fa24d578b3de4e7dc220805
         const mobile = await page.evaluate(() => Promise.race([
           new Promise(resolve => {
             $.ajax({
@@ -256,6 +258,7 @@ function createShopDetailTask(shop) {
 
         log(`DONE：${k} ${JSON.stringify(data)}`)
 
+        await sleep(1000 * 1000)
         await page.close()
         // page._useTime = (page._useTime || 0) + 1
         // const useMore = !page._noUseMore && (page._useTime < 20)
@@ -269,7 +272,7 @@ function createShopDetailTask(shop) {
         log.error(err.message)
         this.addTask(createShopDetailTask(shop))
         // await sleep(1000 * 1000)
-        // await page.close()
+        await page.close()
 
       } finally {
         // await browser.close()
@@ -292,14 +295,17 @@ connectDB().then(async mongo => {
       }
     })
   })
-  // console.log('todos:', findAlls)
-  const todos = findAlls.filter(x => !x.done).map(x => createShopDetailTask(x))
+  // const todos = findAlls.filter(x => !x.done).map(x => createShopDetailTask(x))
+  // FOR TEST
+  const todos = createShopDetailTask({
+    _id: 'f81db0d49fa24d578b3de4e7dc220805'
+  })
   log(`剩余${todos.length}个详情页任务`)
 
   await new Crawler({
     collection: shopCollection,
     maxConcurrenceCount: 1,
-    interval: Math.random() * 500 + 500000,
+    interval: Math.random() * 500 + 500,
   })
     .exec(todos)
     .then(() => {
