@@ -6,6 +6,7 @@
   "scripts": {
     "download": "node ./command/download.js",
     "open": "node ./command/open.js",
+    "dist": "http-server -c0 ./dist",
     "kill": "taskkill /f /im chrome.exe",
     "statics": "http-server ./statics -p9999",
     "db": "mongod --dbpath D:\\@Github\\crack-the-shield\\mongo",
@@ -32,6 +33,7 @@
   },
   "devDependencies": {
     "cross-env": "^7.0.3",
+    "http-server": "^13.0.1",
     "nodemon": "^2.0.7"
   }
 }
