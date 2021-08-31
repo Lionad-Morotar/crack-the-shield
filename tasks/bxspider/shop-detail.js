@@ -112,10 +112,15 @@ function createShopDetailTask(shop) {
         !isPageUsed && (await sleep(1000))
         await page.setExtraHTTPHeaders({
           spider: 'yiguang',
-          referer: `https://spider.test.baixing.cn/detail/${uid}`,
+          referer: `https://spider.test.baixing.cn/`,
           'Accept-Language': 'zh-CN,zh;q=0.9,en-US;q=0.8,en;'
         })
         await page.goto(url, { waitUntil: 'domcontentloaded' })
+        await page.setExtraHTTPHeaders({
+          spider: 'yiguang',
+          referer: `https://spider.test.baixing.cn/detail/${k}`,
+          'Accept-Language': 'zh-CN,zh;q=0.9,en-US;q=0.8,en;'
+        })
         await page.bringToFront()
         const $document = await page.evaluateHandle(() => document)
 
@@ -295,11 +300,11 @@ connectDB().then(async mongo => {
       }
     })
   })
-  // const todos = findAlls.filter(x => !x.done).map(x => createShopDetailTask(x))
+  const todos = findAlls.filter(x => !x.done).map(x => createShopDetailTask(x))
   // FOR TEST
-  const todos = createShopDetailTask({
-    _id: 'f81db0d49fa24d578b3de4e7dc220805'
-  })
+  // const todos = [createShopDetailTask({
+  //   _id: 'f81db0d49fa24d578b3de4e7dc220805'
+  // })]
   log(`剩余${todos.length}个详情页任务`)
 
   await new Crawler({
