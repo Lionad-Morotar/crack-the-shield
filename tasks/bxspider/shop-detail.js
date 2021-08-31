@@ -49,7 +49,7 @@ const getPage = async () => {
     const url = req.url()
     // 伪造指纹
     if (url.match(/s.png\?cf=0/)) {
-      const fingerMatch = fingerprint.match(/&f=([a-zA-Z0-9]*)/)
+      const fingerMatch = url.match(/&f=([a-zA-Z0-9]*)/)
       if (fingerMatch) {
         fingerprint = fingerMatch[1]
       }
@@ -63,10 +63,9 @@ const getPage = async () => {
     }
     // 不加载某些外部脚本，提高响应速度
     else if (
-      url.match(/s.png\?cf=1/) ||
-      url.match(/script.js/) ||
-      url.match(/loaded.js/) ||
-      url.match(/socket.io.min.js/)
+      false
+      // url.match(/script.js/) ||
+      // url.match(/loaded.js/)
     ) {
       req.abort()
       return false
