@@ -1,5 +1,11 @@
 // $ = undefined
 
+Object.defineProperty(navigator, "language", {
+  get() {
+    return "zh-CN"
+  }
+})
+
 // window.console && (window.console.log = (...args) => {})
 
 /******************************************************** Utils */
