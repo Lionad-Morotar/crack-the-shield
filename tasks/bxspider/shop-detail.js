@@ -1,6 +1,8 @@
 const fs = require('fs')
 const path = require('path')
+
 const _ = require('lodash')
+const io = require('socket.io-client')
 const UserAgent = require("user-agents")
 
 const ocr = require('../../plugins/ocr')
@@ -38,13 +40,13 @@ const getPage = async () => {
   await page.evaluateOnNewDocument(waitUntilPropsLoaded)
   await page.evaluateOnNewDocument(styles)
   await page.setViewport(utils.setViewport())
-  await page.setRequestInterception(true)
   // const userAgent = new UserAgent({
   //   deviceCategory: "desktop",
   //   platform: "Win32",
   // })
   // await page.setUserAgent(userAgent.toString())
   let fingerprint
+  await page.setRequestInterception(true)
   await useProxy(page, req => {
     const url = req.url()
     // 伪造指纹
@@ -61,11 +63,11 @@ const getPage = async () => {
       req.abort()
       return false
     }
-    // 不加载某些外部脚本，提高响应速度
+    // 不加载某些外部脚本
     else if (
-      false
-      // url.match(/script.js/) ||
-      // url.match(/loaded.js/)
+      url.match(/socket.io.min.js/) ||
+      url.match(/script.js/) ||
+      url.match(/loaded.js/)
     ) {
       req.abort()
       return false
@@ -73,7 +75,7 @@ const getPage = async () => {
       return true
     }
   })
-  await page.evaluateOnNewDocument(async (socketIOFile) => {
+  await page.evaluateOnNewDocument(async () => {
     document.addEventListener('DOMContentLoaded', () => {
       // 自定义样式
       const $style = document.createElement('style')
@@ -90,13 +92,8 @@ const getPage = async () => {
           }
         `
       document.querySelector('head').appendChild($style)
-
-      // 加载本地 socket.io
-      const $script = document.createElement('script')
-      $script.innerHTML = socketIOFile
-      document.body.appendChild($script)
     })
-  }, socketIOFile)
+  })
   return page
 }
 
@@ -119,6 +116,8 @@ function createShopDetailTask(shop) {
           referer: 'https://spider.test.baixing.cn/'
         })
         await page.goto(url, { waitUntil: 'domcontentloaded' })
+        await page.bringToFront()
+        const $document = await page.evaluateHandle(() => document)
 
         /* 滑块验证 */
         // const sliderRes = await antiSlider(page, config)
@@ -129,9 +128,8 @@ function createShopDetailTask(shop) {
         //   page._noUseMore = false
         // }
 
-        await page.evaluate(async () => await waitUntilPropsLoaded('io'))
-        await page.bringToFront()
-        const $document = await page.evaluateHandle(() => document)
+        // 等待 bfjs
+        const cookie = await page.waitForFunction(() => document.cookie)
 
         // 获取 UID
         data.uid = await page.evaluate(() => uid)
@@ -142,48 +140,70 @@ function createShopDetailTask(shop) {
           $document
         )
 
-        // 获取手机号和号主
+        // 获取号主
         await page.hover('#view-owner')
-        const [owner, mobile] = await page.evaluate(() => Promise.race([
-          Promise.all([
-            new Promise(resolve => {
-              const ws = io(wsUrl, { transports: ['websocket'] })
-              ws.on('connect', () => {
-                ws.emit('i-want-a-name', uid, owner => resolve(owner))
-              })
-            }),
-            new Promise(resolve => {
-              $.ajax({
-                url: '/detail/' + uid + '/mobile',
-                success(res) {
-                  const decodeMobile = (base64) => {
-                    let mobile = ''
-                    const numStr = window.atob(base64)
-                    for (let i = 0; i < numStr.length; i++) {
-                      mobile += String.fromCharCode(
-                        numStr.charCodeAt(i) - 10
-                      )
-                    }
-                    return mobile
-                  }
-                  const mobile = decodeMobile(res.data)
-                  resolve(mobile)
-                }
-              })
+        const owner = await new Promise(resolve => {
+          const errorTick = setTimeout(() => {
+            throw new Error('WebSocket 没有连接')
+          }, 5 * 1000)
+          const options = {
+            transports: ['websocket'],
+            extraHeaders: {
+              Cookie: cookie,
+              spider: 'yiguang'
+            }
+          }
+          const ws = io('wss://spider.test.baixing.cn', options)
+          ws.on('connect', () => {
+            ws.emit('i-want-a-name', data.uid, owner => {
+              if (errorTick) {
+                clearTimeout(errorTick)
+              }
+              resolve(owner)
             })
-          ]),
+          })
+          ws.on('error', () => {
+            throw new Error("Couldn't connect to wss")
+          })
+          ws.on('disconnect', () => {
+            throw new Error("Couldn't connect to wss")
+          })
+        }).then(data => {
+          return data
+        }).catch(error => {
+          throw new Error(error)
+        })
+        data.owner = owner
+
+        // 获取手机号
+        const mobile = await page.evaluate(() => Promise.race([
+          new Promise(resolve => {
+            $.ajax({
+              url: '/detail/' + uid + '/mobile',
+              success(res) {
+                const decodeMobile = (base64) => {
+                  let mobile = ''
+                  const numStr = window.atob(base64)
+                  for (let i = 0; i < numStr.length; i++) {
+                    mobile += String.fromCharCode(
+                      numStr.charCodeAt(i) - 10
+                    )
+                  }
+                  return mobile
+                }
+                const mobile = decodeMobile(res.data)
+                resolve(mobile)
+              }
+            })
+          }),
           new Promise(resolve => {
             setTimeout(() => {
               console.log('[INFO] get owner and mobile failed')
-              resolve(['-', '-'])
-            }, (1000 * 100000))
+              resolve('-')
+            }, (1000 * 5))
           })
         ]))
-        data.owner = owner
         data.mobile = mobile
-
-        const pageDir = dir('spider-test/', data.name)
-        await mkdir(pageDir, true)
 
         // 热线
         const $hotline = await page.evaluateHandle(() => document.querySelector('.official-nav-phone-block'))
@@ -234,7 +254,7 @@ function createShopDetailTask(shop) {
           })
         })
 
-        log(`DONE：${k} ${data}`)
+        log(`DONE：${k} ${JSON.stringify(data)}`)
 
         await page.close()
         // page._useTime = (page._useTime || 0) + 1

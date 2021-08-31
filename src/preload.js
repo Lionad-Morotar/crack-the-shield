@@ -36,7 +36,7 @@ window._cbs = {
         }
       }
       if (skip || time < 10) {
-        console.log('[INFO] skip record timeout')
+        // console.log('[INFO] skip record timeout')
         return window._setTimeout(cb, time)
       } else {
         time = timeCheck ? timeCheck(cb, time) : time
@@ -48,7 +48,7 @@ window._cbs = {
           cb: cbWrapper,
           pause: false
         })
-        console.log('[INFO] record timeout')
+        // console.log('[INFO] record timeout')
         return timeoutID
       }
     } catch (recordError) {

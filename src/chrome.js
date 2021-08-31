@@ -16,9 +16,6 @@ const USE_PROXY = ''
 puppeteer.use(StealthPlugin())
 // puppeteer.use(UAPlugin())
 
-// 混淆指纹
-antiCanvasFPExtPath = path.join(__dirname, '../extension/anti-canvas-fp')
-
 const verifySlideMainCSS = fs.readFileSync(dir('statics/verifySlide.main.css'))
 const verifySlideMainJS = fs.readFileSync(dir('statics/verifySlide.main.js'))
 
@@ -60,17 +57,27 @@ const MINARGS = [
   '--password-store=basic',
   '--use-gl=swiftshader',
   '--use-mock-keychain',
+  /**
+   * remove cors
+   * @see https://github.com/puppeteer/puppeteer/issues/4889
+   **/
+  '--disable-features=OutOfBlinkCors',
+  '--disable-web-security',
+  /* remove cors end */
 ]
 
 // 创建实例以供之后使用
 const createInstance = async () => {
   let browser
+  // 混淆指纹插件
+  const antiCanvasFPExtPath = path.join(__dirname, '../extension/anti-canvas-fp')
   try {
     browser = await puppeteer.launch({
       headless: false,
       ignoreHTTPSErrors: true,
       devtools: true,
       userDataDir: '../cache',
+      // executablePath: 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
       args: [
         ...MINARGS,
         ...(!USE_PROXY ? [] : [
@@ -156,17 +163,24 @@ const useProxy = async (page, proxyReq) => {
         return req.continue()
       }
       // 代理部分静态资源到本地
-      if (url.startsWith('https://file.baixing.net')) {
+      if (
+        url.startsWith('https://file.baixing.net')
+      ) {
         let body
-        if (url === 'https://file.baixing.net/verifySlide/1.0.4/main.css')
+        if (url === 'https://file.baixing.net/verifySlide/1.0.4/main.css') {
           body = verifySlideMainCSS
-        if (url === 'https://file.baixing.net/verifySlide/1.0.4/main.js')
+        } else if (url === 'https://file.baixing.net/verifySlide/1.0.4/main.js') {
           body = verifySlideMainJS
-        return req.respond({
-          status: 200,
-          headers: req.headers,
-          body: body.toString(),
-        })
+        }
+        if (body) {
+          return req.respond({
+            status: 200,
+            headers: req.headers,
+            body,
+          })
+        } else {
+          return req.continue()
+        }
       }
       // 中间件
       if (proxyReq) {
