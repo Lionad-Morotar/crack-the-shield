@@ -258,7 +258,7 @@ connectDB().then(async mongo => {
   const db = mongo.db(config.dbname)
   shopCollection = db.collection('shops')
 
-  const finds = await new Promise((resolve, reject) => {
+  const findAlls = await new Promise((resolve, reject) => {
     shopCollection.find({}).toArray(function (err, res) {
       if (err) {
         reject(err)
@@ -267,7 +267,8 @@ connectDB().then(async mongo => {
       }
     })
   })
-  const todos = finds.filter(x => !x.done).map(x => createShopDetailTask(x))
+  // console.log('todos:', findAlls)
+  const todos = findAlls.filter(x => !x.done).map(x => createShopDetailTask(x))
   log(`剩余${todos.length}个详情页任务`)
 
   await new Crawler({
