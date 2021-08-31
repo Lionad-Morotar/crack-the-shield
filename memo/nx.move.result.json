@@ -1,13 +1,4 @@
-const fs = require('fs')
-const path = require('path')
-
-const { dir } = require('../utils')
-
-const FILENAME = 'bfjs'
-
-let nxContent = fs.readFileSync(dir(`memo/statics/${FILENAME}/${FILENAME}.nx.js`), 'utf8')
-const attrName = '_0x3a1d'
-const strs = [
+[
   "sameSite",
   "setDefault",
   "cookieEnabled",
@@ -185,55 +176,3 @@ const strs = [
   "__BF_SIGN__",
   "finalize"
 ]
-const baseIDX = 0x6d
-let washNum
-
-/* 清洗十六进制数字 */
-
-washNum = baseIDX + strs.length
-while (washNum >= 0) {
-  const num0x = '0x' + washNum.toString(16)
-  // TODO find no use idx
-  nxContent = nxContent.replace(
-    new RegExp(`${num0x}([^a-zA-Z0-9])`, 'img'),
-    `${washNum}$1`
-  )
-  washNum--
-}
-
-/* 清洗属性 */
-
-const attrNames = [attrName]
-const toWash = [attrName]
-let curName
-while (curName = toWash.pop()) {
-  const attrNamesMatches = nxContent.match(
-    new RegExp(`(_0x[a-zA-Z0-9]*)\\s*=\\s*${curName}`, 'img')
-  )
-  if (attrNamesMatches) {
-    attrNamesMatches.map(x => {
-      const [all, attr] = x.match(
-        new RegExp(`(_0x[a-zA-Z0-9]*)\\s*=\\s*${curName}`)
-      )
-      attrNames.push(attr)
-      toWash.push(attr)
-    })
-  }
-}
-attrNames.map(samename => {
-  washNum = baseIDX + strs.length
-  while (washNum >= 0) {
-    nxContent = nxContent.replace(
-      new RegExp(`${samename}.${washNum}.`, 'img'),
-      `"${strs[washNum - baseIDX]}"`
-    )
-    washNum--
-  }
-})
-// nxContent = nxContent.replace(new RegExp(`function.${attrName}[^}]*}\\s+`, 'img'), '')
-
-/* 写入文件 */
-
-fs.writeFileSync(dir(`memo/statics/${FILENAME}/${FILENAME}.js`), nxContent)
-
-// TODO setTimout
