@@ -10,7 +10,9 @@
     "statics": "http-server ./statics -p9999",
     "db": "mongod --dbpath D:\\@Github\\crack-the-shield\\mongo",
     "spider-shopid:test": "cross-env NODE_ENV=test node ./tasks/spider-shopid/index.js",
-    "spider-shopid:prod": "cross-env NODE_ENV=production node ./tasks/spider-shopid/index.js"
+    "spider-shopid:prod": "cross-env NODE_ENV=production node ./tasks/spider-shopid/index.js",
+    "spider-detail:test": "cross-env NODE_ENV=test node ./tasks/spider-shopid/shop-detail.js",
+    "spider-detail:prod": "cross-env NODE_ENV=production node ./tasks/spider-shopid/shop-detail.js"
   },
   "author": "Lionad",
   "license": "ISC",

@@ -120,4 +120,4 @@ spider-test/
 mongo/
 .temp/
 cache/
-log.error.txt
+*.error.txt

@@ -204,7 +204,7 @@ connectDB().then(async mongo => {
 
   await new Crawler({
     collection: listCollection,
-    maxConcurrenceCount: 5,
+    maxConcurrenceCount: 3,
     interval: Math.random() * 500 + 500,
   })
     .exec(todos)
@@ -215,6 +215,4 @@ connectDB().then(async mongo => {
       log.error(`task error ${error.message}`)
     })
 
-  /* 排列列表页面任务 */
-  // TODO
 })
