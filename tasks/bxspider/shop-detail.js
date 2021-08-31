@@ -44,9 +44,18 @@ const getPage = async () => {
   //   platform: "Win32",
   // })
   // await page.setUserAgent(userAgent.toString())
-  // 屏蔽一些不必要的请求
+  let fingerprint
   await useProxy(page, req => {
     const url = req.url()
+    // 伪造指纹
+    if (url.match(/s.png\?cf=0/)) {
+      const fingerMatch = fingerprint.match(/&f=([a-zA-Z0-9]*)/)
+      if (fingerMatch) {
+        fingerprint = fingerMatch[1]
+      }
+    } else if (url.match(/s.png\?cf=\d+/)) {
+      req.url = url.replace(/&f=[a-zA-Z0-9]*/, '&f=' + fingerprint)
+    }
     // 不加载广告图片，提高速度
     if (url.match(/pexels-photo/)) {
       req.abort()
@@ -54,7 +63,6 @@ const getPage = async () => {
     }
     // 不加载某些外部脚本，提高响应速度
     else if (
-      url.match(/s.png\?cf=0/) ||
       url.match(/s.png\?cf=1/) ||
       url.match(/script.js/) ||
       url.match(/loaded.js/) ||
@@ -121,8 +129,6 @@ function createShopDetailTask(shop) {
         //   }
         //   page._noUseMore = false
         // }
-        await page.waitForNavigation({ timeout: 15 * 1000 })
-        await sleep(3000)
 
         await page.evaluate(async () => await waitUntilPropsLoaded('io'))
         await page.bringToFront()
@@ -156,7 +162,7 @@ function createShopDetailTask(shop) {
                     const numStr = window.atob(base64)
                     for (let i = 0; i < numStr.length; i++) {
                       mobile += String.fromCharCode(
-                        numStrcharCodeAt(i) - 10
+                        numStr.charCodeAt(i) - 10
                       )
                     }
                     return mobile
@@ -171,7 +177,7 @@ function createShopDetailTask(shop) {
             setTimeout(() => {
               console.log('[INFO] get owner and mobile failed')
               resolve(['-', '-'])
-            }, (Math.random() * 1000 + 2000))
+            }, (1000 * 100000))
           })
         ]))
         data.owner = owner
