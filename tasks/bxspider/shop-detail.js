@@ -54,8 +54,16 @@ const getPage = async (uid) => {
       if (fingerMatch) {
         fingerprint = fingerMatch[1]
       }
-    } else if (url.match(/s.png\?cf=\d+/)) {
-      req.url = url.replace(/&f=[a-zA-Z0-9]*/, '&f=' + fingerprint)
+    } else if (url.match(/s.png\?cf=1/) && !url.match(/T=T/)) {
+      // mark &T=T do not redirect again
+      const fakeURL = url.replace(/&f=[a-zA-Z0-9]*/, '&T=T&f=' + fingerprint)
+      req.respond({
+        status: 301,
+        headers: {
+          location: fakeURL
+        }
+      })
+      return false
     }
     // 不加载广告图片，提高速度
     if (url.match(/pexels-photo/)) {
@@ -125,13 +133,14 @@ function createShopDetailTask(shop) {
         const $document = await page.evaluateHandle(() => document)
 
         /* 滑块验证 */
-        const sliderRes = await antiSlider(page, config)
-        if (isPageUsed) {
-          if (sliderRes !== 'skip') {
-            isPageUsed
-          }
-          page._noUseMore = false
-        }
+        await sleep(1000 * 1000)
+        // const sliderRes = await antiSlider(page, config)
+        // if (isPageUsed) {
+        //   if (sliderRes !== 'skip') {
+        //     isPageUsed
+        //   }
+        //   page._noUseMore = false
+        // }
 
         // 等待 bfjs
         const cookie = await page.waitForFunction(() => document.cookie)
@@ -182,7 +191,7 @@ function createShopDetailTask(shop) {
         data.owner = owner
 
         // 获取手机号
-        // FIXME on https://spider.test.baixing.cn/detail/f81db0d49fa24d578b3de4e7dc220805
+        // TODO alert if not match
         const mobile = await page.evaluate(() => Promise.race([
           new Promise(resolve => {
             $.ajax({
@@ -263,7 +272,7 @@ function createShopDetailTask(shop) {
 
         log(`DONE：${k} ${JSON.stringify(data)}`)
 
-        await sleep(1000 * 1000)
+        // await sleep(1000 * 1000)
         await page.close()
         // page._useTime = (page._useTime || 0) + 1
         // const useMore = !page._noUseMore && (page._useTime < 20)

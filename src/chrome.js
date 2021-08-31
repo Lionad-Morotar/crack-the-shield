@@ -9,8 +9,8 @@ const { log, dir } = require('../utils')
 const { getProxy } = require('./private/dailiyun')
 const { proxyURL, getAuthorization } = require('./private/xdaili')
 
-const USE_PROXY = ''
-// const USE_PROXY = 'XDAILI'
+// const USE_PROXY = ''
+const USE_PROXY = 'XDAILI'
 // const USE_PROXY = 'DAILIYUN'
 
 puppeteer.use(StealthPlugin())
