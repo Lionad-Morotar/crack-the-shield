@@ -20,13 +20,13 @@ const waitUntilLoaded = function () {
       : $elm
     return new Promise((resolve, reject) => {
       if (!target) {
-        console.log('[INFO] skip wait no elem')
+        console.log('跳过等待')
         resolve()
       }
       // 超时报错
       const errorTick = setTimeout(() => {
         tick && window.clearTimeout(tick)
-        reject('[ERR] not load', $elm)
+        reject('等待超时')
       }, 10 * 1000)
 
       tick = setTimeout(() => {
@@ -56,14 +56,14 @@ const waitUntilLoaded = function () {
 }
 
 // 等待对象上某属性挂载完毕
-const waitUntilPropsLoaded = function() {
-  const fn = (name, objFn) => {
+const waitUntilPropsLoaded = function () {
+  const fn = (name, objFn, maxTimeout = 5000) => {
     let tick
     return new Promise((resolve, reject) => {
       const errorTick = setTimeout(() => {
         tick && window.clearTimeout(tick)
-        reject('[ERR] not found props', name)
-      }, 5 * 1000)
+        reject('没有找到对象上的' + name + '属性')
+      }, maxTimeout)
 
       const re = () => setTimeout(() => {
         const targetObj = objFn || window
@@ -89,8 +89,39 @@ const waitUntilPropsLoaded = function() {
   }
 }
 
+// 等待对象上某属性挂载完毕
+const waitUntil = function () {
+  const fn = (checkFn, maxTimeout = 5000) => {
+    let tick
+    return new Promise((resolve, reject) => {
+      const errorTick = setTimeout(() => {
+        tick && window.clearTimeout(tick)
+        reject('等待超时')
+      }, maxTimeout)
+
+      const re = () => setTimeout(() => {
+        const res = checkFn()
+        if (res) {
+          window.clearTimeout(errorTick)
+          resolve(res)
+        } else {
+          tick = re()
+        }
+      }, 25)
+
+      tick = re()
+    })
+  }
+  if (window) {
+    window.waitUntil = fn
+  } else {
+    return fn
+  }
+}
+
 module.exports = {
   styles,
+  waitUntil,
   waitUntilLoaded,
   waitUntilPropsLoaded
 }

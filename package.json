@@ -7,20 +7,26 @@
     "download": "node ./command/download.js",
     "open": "node ./command/open.js",
     "dist": "http-server -c0 ./dist",
+    "kill": "taskkill /f /im chrome.exe",
+    "statics": "http-server ./statics -p9999",
     "db": "mongod --dbpath D:\\@Github\\crack-the-shield\\mongo",
-    "test:spider-shopid": "cross-env NODE_ENV=test node ./tasks/spider-shopid/index.js",
-    "prod:spider-shopid": "cross-env NODE_ENV=production node ./tasks/spider-shopid/index.js"
+    "spider-shopid:test": "cross-env NODE_ENV=test node ./tasks/spider-shopid/index.js",
+    "spider-shopid:prod": "cross-env NODE_ENV=production node ./tasks/spider-shopid/index.js",
+    "spider-detail:test": "cross-env NODE_ENV=test node ./tasks/spider-shopid/shop-detail.js",
+    "spider-detail:prod": "cross-env NODE_ENV=production node ./tasks/spider-shopid/shop-detail.js"
   },
   "author": "Lionad",
   "license": "ISC",
   "dependencies": {
     "baidu-aip-sdk": "^4.15.4",
+    "crypto": "^1.0.1",
     "lodash": "^4.17.21",
     "mongodb": "^4.1.1",
     "puppeteer": "^8.0.0",
     "puppeteer-extra": "^3.1.18",
     "puppeteer-extra-plugin-stealth": "^2.7.8",
     "rembrandt": "^0.1.3",
+    "request": "^2.88.2",
     "rimraf": "^3.0.2",
     "user-agents": "^1.0.758",
     "website-scraper": "^4.2.3"

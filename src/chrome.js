@@ -1,14 +1,26 @@
+const fs = require('fs')
 const path = require('path')
+const request = require('request')
 const puppeteer = require('puppeteer-extra')
 const StealthPlugin = require('puppeteer-extra-plugin-stealth')
 // const UAPlugin = require('puppeteer-extra-plugin-anonymize-ua')
-const { log } = require('../utils')
+
+const { log, dir } = require('../utils')
+const { getProxy } = require('./private/dailiyun')
+const { proxyURL, getAuthorization } = require('./private/xdaili')
+
+const USE_PROXY = ''
+// const USE_PROXY = 'XDAILI'
+// const USE_PROXY = 'DAILIYUN'
 
 puppeteer.use(StealthPlugin())
 // puppeteer.use(UAPlugin())
 
 // 混淆指纹
 antiCanvasFPExtPath = path.join(__dirname, '../extension/anti-canvas-fp')
+
+const verifySlideMainCSS = fs.readFileSync(dir('statics/verifySlide.main.css'))
+const verifySlideMainJS = fs.readFileSync(dir('statics/verifySlide.main.js'))
 
 const MAX = 1
 const DEBUG_POINT_POOL = []
@@ -92,20 +104,116 @@ const getInstance = async () => {
   return chrome
 }
 
+/**
+ * 使用代理
+ * 使用时需要注意 page.on('request') 的顺序
+ **/
+const useProxy = async (page, proxyReq) => {
+  await page.setRequestInterception(true)
+  const proxy = USE_PROXY === ''
+    ? ''
+    : USE_PROXY === 'DAILIYUN'
+      ? await getProxy()
+      : proxyURL
+  console.log('[INFO] proxy', proxy)
+  await page.on('request', async req => {
+    try {
+      let url = req.url()
+      const resType = req.resourceType()
+      // 本地代理放行
+      if (url.includes('192.168')) {
+        return req.continue()
+      }
+      // 内联图片放行 
+      if (url.includes('base64')) {
+        return req.continue()
+      }
+      // 代理部分静态资源到本地
+      if (url.startsWith('https://file.baixing.net')) {
+        let body
+        if (url === 'https://file.baixing.net/verifySlide/1.0.4/main.css')
+          body = verifySlideMainCSS
+        if (url === 'https://file.baixing.net/verifySlide/1.0.4/main.js')
+          body = verifySlideMainJS
+        return req.respond({
+          status: 200,
+          headers: req.headers,
+          body: body.toString(),
+        })
+      }
+      // 中间件
+      if (proxyReq) {
+        const continueReq = proxyReq(req)
+        if (!continueReq) {
+          return
+        }
+      }
+      // 代理请求
+      if (proxy && ['document', 'xhr'].includes(resType)) {
+        const response = await new Promise(async (resolve, reject) => {
+          request({
+            url,
+            method: req.method(),
+            strictSSL: false,
+            followRedirect: false,
+            headers: USE_PROXY === 'DAILIYUN'
+              ? req.headers()
+              : {
+                ...req.headers(),
+                'proxy-authorization': getAuthorization(),
+                'Proxy-Authorization': getAuthorization()
+              },
+            proxyHeaderWhiteList: [
+              'proxy-authorization',
+              'Proxy-Authorization'
+            ],
+            body: req.postData(),
+            proxy,
+            tunnel: true
+          }, (err, proxedResponse) => {
+            if (err) {
+              reject(err)
+            } else {
+              console.log(`[INFO] proxy res`, proxedResponse.statusCode)
+              resolve(proxedResponse)
+            }
+          })
+        })
+        return req.respond({
+          status: response.statusCode,
+          contentType: response.headers['content-type'],
+          headers: response.headers,
+          body: response.body,
+        })
+      } else {
+        req.continue()
+      }
+    } catch (e) {
+      console.error('[ERR]', e)
+      if ((e.message || '').match(/tunneling socket/)) {
+        throw new Error('代理异常')
+      }
+      // 不要暴露真实IP
+      // req.continue()
+    }
+  })
+}
+
 module.exports = {
   /**
    * @see https://pptr.dev/ puppeteer 文档
    **/
   chrome: puppeteer,
   getBrowser: getInstance,
+  useProxy,
   /**
    * 帮助函数
    **/
   utils: {
-    setViewport({ width, height } = { width: 1920, height: 1080}) {
+    setViewport({ width, height } = { width: 1366, height: 768}) {
       return {
-        width: width || 1920,
-        height: height || 1080
+        width: width || 1366,
+        height: height || 768
       }
     }
   }

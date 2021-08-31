@@ -63,8 +63,9 @@ module.exports = class Crawler {
           while (restConcurrenceCount-- > 0) {
             const task = this.todoList.pop()
             const { task: taskDetail } = task
+            const artifactMaybe = results[results.length - 1]
             this.recordTask(task)
-            this.run(taskDetail).then(async res => {
+            this.run(taskDetail, artifactMaybe).then(async res => {
               results.push(res)
               if (results.length === totalTaskLen) resolve(results)
               this.removeTask(task)
@@ -86,7 +87,7 @@ module.exports = class Crawler {
   /**
    * 执行任务
    */
-  async run(task) {
+  async run(task, artifactMaybe) {
     const { id, idtype, run } = task
 
     // const findFn = async () => {
@@ -97,7 +98,7 @@ module.exports = class Crawler {
     //       if (err) throw err
     //       resolve(res)
     //     })
-    //   })
+    //   })1
     // }
 
     // const findRes = this.force ? [] : (await findFn())
@@ -111,6 +112,7 @@ module.exports = class Crawler {
     // }
 
     return await run.bind(this)({
+      artifact: artifactMaybe,
       collection: this.collection
     })
   }

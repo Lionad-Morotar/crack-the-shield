@@ -1,39 +1,15 @@
-const fs = require('fs')
-const path = require('path')
 const _ = require('lodash')
 const UserAgent = require("user-agents")
 
-const ocr = require('../../plugins/ocr')
-const rembrandt = require('../../plugins/rembrandt')
 const connectDB = require('../../src/connect-db')
 const Crawler = require('../../src/crawler')
-const { getBrowser, utils } = require('../../src/chrome')
-const { findTroughs, sleep } = require('../../utils')
-const { waitUntilLoaded, waitUntilPropsLoaded } = require('../../utils/dom')
+const { getBrowser, useProxy, utils } = require('../../src/chrome')
+const { sleep, log } = require('../../utils')
+const { waitUntil, waitUntilLoaded, waitUntilPropsLoaded } = require('../../utils/dom')
 const pageMap = require('./page.json')
-
-const slider_1_raw = fs.readFileSync(path.join(__dirname, './sliders/slider-1-raw.png'))
-const slider_2_raw = fs.readFileSync(path.join(__dirname, './sliders/slider-2-raw.png'))
-const slider_3_raw = fs.readFileSync(path.join(__dirname, './sliders/slider-3-raw.png'))
-const slider_1_s1 = fs.readFileSync(path.join(__dirname, './sliders/slider-1-s1.png'))
-const slider_2_s1 = fs.readFileSync(path.join(__dirname, './sliders/slider-2-s1.png'))
-const slider_3_s1 = fs.readFileSync(path.join(__dirname, './sliders/slider-3-s1.png'))
-const slider_1_s05 = fs.readFileSync(path.join(__dirname, './sliders/slider-1-s05.png'))
-const slider_2_s05 = fs.readFileSync(path.join(__dirname, './sliders/slider-2-s05.png'))
-const slider_3_s05 = fs.readFileSync(path.join(__dirname, './sliders/slider-3-s05.png'))
-const slider_s05 = {
-  1: slider_1_s05,
-  2: slider_2_s05,
-  3: slider_3_s05
-}
-const slider_s1 = {
-  1: slider_1_s1,
-  2: slider_2_s1,
-  3: slider_3_s1
-}
+const antiSlider = require('./anti-slider.js')
 
 const isProd = process.env.NODE_ENV === 'production'
-const noCloseForDebug = isProd ? false : true
 const config = isProd
   ? {
     dbname: 'spider',
@@ -43,7 +19,9 @@ const config = isProd
     useLocalSliderNum: true,
     dbname: 'spider-test',
     // baseurl: 'http://192.168.1.7:8080/spider-main/'
-    baseurl: 'http://192.168.1.7:8080/spider-slider'
+    // baseurl: 'http://192.168.1.7:8080/spider-slider'
+    baseurl: 'https://www.ipaddress.com'
+    // baseurl: 'https://www.baidu.com'
   }
 
 // 初始化浏览器
@@ -51,7 +29,10 @@ const browser = (async () => await getBrowser())()
 const getPage = async () => {
   const instance = await browser
   const page = await instance.newPage()
+  page._timeRatio = 2
   await page.setExtraHTTPHeaders({ spider: 'yiguang' })
+  await page.setDefaultNavigationTimeout(8 * 1000)
+  await page.evaluateOnNewDocument(waitUntil)
   await page.evaluateOnNewDocument(waitUntilLoaded)
   await page.evaluateOnNewDocument(waitUntilPropsLoaded)
   await page.setViewport(utils.setViewport())
@@ -62,9 +43,10 @@ const getPage = async () => {
   })
   await page.setUserAgent(userAgent.toString())
   // 屏蔽一些不必要的请求
-  page.on('request', req => {
+  await useProxy(page, req => {
     const url = req.url()
     if (
+      url.match(/logo_baixing.png/) ||
       url.match(/title.png/) ||
       url.match(/index.css/) ||
       url.match(/bfjs/) ||
@@ -72,9 +54,10 @@ const getPage = async () => {
       url.match(/script.js/)
     ) {
       req.abort()
-      return
+      return false
+    } else {
+      return true
     }
-    req.continue()
   })
   await page.evaluateOnNewDocument(async () => {
     document.addEventListener('DOMContentLoaded', () => {
@@ -99,193 +82,22 @@ const shopListPageTasks = _.shuffle(
 function getShopListTask(k, v) {
   return {
     id: k,
-      async run({ collection }) {
-      let page = await getPage()
+    async run({ collection, artifact }) {
+      const page = artifact || (await getPage())
+      const isPageUsed = page === artifact
       try {
         const url = `${config.baseurl}?p=${v}`
+        !isPageUsed && (await sleep(1000))
         await page.goto(url, { waitUntil: 'domcontentloaded' })
+        await page.bringToFront()
 
         /* 滑块验证 */
-        const $slider = await page.evaluate(() => document.querySelector('.verify-img-panel'))
-        if ($slider) {
-          const sliderImgBase64 = await page.evaluate(async () => (
-            await waitUntilPropsLoaded('src', () => {
-              const $elm = document.querySelector('.verify-img-panel img')
-              return $elm && $elm.getAttribute('src')
-            }))
-          )
-
-          // 找到要滑到第几个滑块
-          let num
-          if (config.useLocalSliderNum) {
-            num = 1
-            console.log('[INFO] use dev slider num', num)
-          } else {
-            const ocrRes = await ocr.numbers(sliderImgBase64, 'base64')
-            if (ocrRes && ocrRes.words_result_num >= 0) {
-              num = ocrRes.words_result[0].words.split('')[0]
-            } else {
-              throw new Error('[ERR] no slider number found')
-            }
-            console.log('[INFO] slider num', num)
+        const sliderRes = await antiSlider(page, config)
+        if (isPageUsed) {
+          if (sliderRes !== 'skip') {
+            isPageUsed
           }
-
-          // 找到是哪种类型的 slider
-          const $sliderImg = await page.evaluateHandle(() => document.querySelector('.verify-img-panel img'))
-          const sliderImg = await $sliderImg.screenshot()
-          const typeRes = await Promise.all([
-            rembrandt({
-              imageA: sliderImg,
-              imageB: slider_1_raw
-            }),
-            rembrandt({
-              imageA: sliderImg,
-              imageB: slider_2_raw
-            }),
-            rembrandt({
-              imageA: sliderImg,
-              imageB: slider_3_raw
-            }),
-          ])
-          const minDifferences = Math.min(...typeRes.map(x => x.differences))
-          const sliderTemplateID = typeRes.findIndex(x => x.differences === minDifferences) + 1
-          if (sliderTemplateID) {
-            console.log('[INFO] slider template', sliderTemplateID)
-          } else {
-            throw new Error('[ERR] no slider type found')
-          }
-
-          // 设置滑块样式以方便图片比较
-          await page.evaluate(async () => await waitUntilLoaded('.verify-sub-block img'))
-          const $sliderFloat = await page.evaluateHandle(() => document.querySelector('.verify-sub-block img'))
-          await page.evaluate(async $sliderFloat => {
-            console.log('$sliderFloat', $sliderFloat)
-            $sliderFloat.setAttribute('style', 'filter:grayscale(1) brightness(.95) drop-shadow(0 0 2px #888);left: 0px')
-          }, $sliderFloat)
-
-          // 设置滑块图片样式以方便图片比较
-          const $sliderBG =await page.evaluateHandle(() => document.querySelector('.verify-img-panel .block-bg'))
-          await page.evaluate(async $sliderBG => {
-            $sliderBG.setAttribute('style', 'filter:grayscale(1)')
-          }, $sliderBG)
-
-          // 用 10px 的速度取得局部最优解
-          const $slider =await page.evaluateHandle(() => document.querySelector('.verify-slide'))
-          await page.evaluate(async $slider => {
-            $slider.setAttribute('style', 'transform:scale(0.5)')
-          }, $slider)
-          const res10px = []
-          // 计算匹配程度
-          let left = 85
-          while (left <= 395) {
-            await page.evaluate(async ($sliderFloat, left) => {
-              const rawStyle = $sliderFloat.getAttribute('style')
-              $sliderFloat.setAttribute('style', rawStyle.replace(/left:\s*\d+px/, `left: ${left}px`))
-            }, $sliderFloat, left)
-            const $panel = await page.evaluateHandle(() => document.querySelector('.verify-img-panel'))
-            const panelImgBase64 = await $panel.screenshot({
-              type: 'jpeg'
-            })
-            const compareRes = await rembrandt({
-              imageA: panelImgBase64,
-              imageB: slider_s05[sliderTemplateID]
-            })
-            res10px.push({
-              left,
-              diff: compareRes.differences
-            })
-            left += 15
-          }
-
-          // 过滤出3个波谷
-          let res10px3left
-          const res10pxThroughIdxs = findTroughs(res10px.map(x => x.diff))
-          if (res10pxThroughIdxs.length === 3) {
-            res10px3left = res10pxThroughIdxs.map(x => res10px[x])
-          } else if (res10pxThroughIdxs.length > 3) {
-            // 类聚阈值从 1 开始扩增直到只留下 3 个波谷
-            // @see 调试可使用网站 https://echarts.apache.org/examples/zh/editor.html?c=line-simple
-            let group = [], count = 10, threshold = 0
-            while (count && (group.length !== 3)) {
-              count--
-              threshold++
-              group = res10pxThroughIdxs.reduce((h, c) => {
-                const find = h.find(x => Math.abs(x - c) <= threshold)
-                if (find) {
-                  const leftItem = res10px[find].diff < res10px[c].diff ? find : c
-                  if (leftItem === c) {
-                    h.splice(h.findIndex(x => x === find), 1, c)
-                  }
-                } else {
-                  h.push(c)
-                }
-                return h
-              }, [])
-            }
-            if (!count) {
-              throw new Error('[ERR] throughs not found')
-            }
-            if (group.length === 3) {
-              res10px3left = group.map(x => res10px[x])
-            }
-          } else {
-            throw new Error('[ERR] throughs not enough')
-          }
-
-          // 遍历取得最优解
-          await page.evaluate(async $slider => {
-            $slider.setAttribute('style', '')
-          }, $slider)
-          const mudLeft = res10px3left[num - 1].left
-          left = mudLeft - 7
-          const res1px = []
-          while (left <= mudLeft + 7) {
-            await page.evaluate(async ($sliderFloat, left) => {
-              const rawStyle = $sliderFloat.getAttribute('style')
-              $sliderFloat.setAttribute('style', rawStyle.replace(/left:\s*\d+px/, `left: ${left}px`))
-            }, $sliderFloat, left)
-            const $panel = await page.evaluateHandle(() => document.querySelector('.verify-img-panel'))
-            const panelImgBase64 = await $panel.screenshot({
-              type: 'jpeg'
-            })
-            const compareRes = await rembrandt({
-              imageA: panelImgBase64,
-              imageB: slider_s1[sliderTemplateID]
-            })
-            res1px.push({
-              left,
-              diff: compareRes.differences
-            })
-            left += 1
-          }
-          const min1pxDiff = Math.min(...res1px.map(x => x.diff))
-          const exactLeft = res1px.find(x => x.diff === min1pxDiff).left
-          console.log('[INFO] exact left px', exactLeft)
-
-          // 重置样式
-          await page.evaluate(async $sliderFloat => {
-            console.log('$sliderFloat', $sliderFloat)
-            $sliderFloat.setAttribute('style', '')
-          }, $sliderFloat)
-          await page.evaluate(async $sliderBG => {
-            $sliderBG.setAttribute('style', '')
-          }, $sliderBG)
-
-          // 开始移动滑块
-          const $move = await page.evaluateHandle(() => document.querySelector('.verify-move-block'))
-          const moveBox = await $move.boundingBox()
-          await page.mouse.move(
-            moveBox.x + moveBox.width / 2,
-            moveBox.y + moveBox.height / 2
-          )
-          await page.mouse.down()
-          await page.mouse.move(
-            moveBox.x + exactLeft,
-            moveBox.y + moveBox.height / 2,
-            { steps: 8 }
-          )
-          await page.mouse.up()
-
+          page._noUseMore = false
         }
 
         // 获取店铺 URL 和名称信息
@@ -298,12 +110,12 @@ function getShopListTask(k, v) {
               const name = $shop.querySelector('.company-name').innerText.replace(/\s/g, '')
               return { id, name }
             } else {
-              throw new Error('[ERR] no id matched')
+              throw new Error('no id matched')
             }
           })
         })
         if (shops.length === 0) {
-          throw new Error('[ERR] list not found')
+          throw new Error('list not found')
         }
 
         // 储存店铺数据
@@ -330,7 +142,7 @@ function getShopListTask(k, v) {
         )
 
         // 储存列表页面数据
-        const data = { _id: k, url }
+        const data = { _id: k, url, store: shops }
         await new Promise((resolve, reject) => {
           collection.deleteMany({ _id: k }, function (err) {
             if (err) {
@@ -346,14 +158,25 @@ function getShopListTask(k, v) {
           })
         })
 
+        log(`DONE：${url} ${shops.length}`)
+
+        await page.close()
+        // page._useTime = (page._useTime || 0) + 1
+        // const useMore = !page._noUseMore && (page._useTime < 20)
+        // if (useMore) {
+        //   return page
+        // }
+
       } catch (err) {
-        console.error(err)
+
+        console.log(err)
+        log.error(err.message)
         this.addTask(getShopListTask(k, v))
+        // await sleep(1000 * 1000)
+        await page.close()
+
       } finally {
-        await new Promise(resolve => setTimeout(resolve, Math.random() * 500))
-        if (!noCloseForDebug) {
-          await page.close()
-        }
+        // await browser.close()
       }
     }
   }
@@ -377,21 +200,19 @@ connectDB().then(async mongo => {
     })
   })
   const todos = shopListPageTasks.filter(x => !finds.find(y => y._id === x.id))
-  console.log(`[INFO] 剩余${todos.length}个列表页任务`)
+  log(`剩余${todos.length}个列表页任务`)
 
   await new Crawler({
     collection: listCollection,
-    maxConcurrenceCount: 1,
-    interval: Math.random() * 500 + 500000,
+    maxConcurrenceCount: 3,
+    interval: Math.random() * 500 + 500,
   })
     .exec(todos)
     .then(() => {
-      console.log('[INFO] task done')
+      log(`task done`)
     })
     .catch(error => {
-      console.error('[ERR] task error : ', error)
+      log.error(`task error ${error.message}`)
     })
 
-  /* 排列列表页面任务 */
-  // TODO
 })
