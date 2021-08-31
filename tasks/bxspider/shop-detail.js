@@ -28,7 +28,7 @@ const config = isProd
 
 // 初始化浏览器
 const browser = (async () => await getBrowser())()
-const getPage = async () => {
+const getPage = async (uid) => {
   const instance = await browser
   const page = await instance.newPage()
   page._timeRatio = 1
@@ -103,7 +103,7 @@ function createShopDetailTask(shop) {
   return {
     id: k,
     async run({ collection, artifact }) {
-      const page = artifact || (await getPage())
+      const page = artifact || (await getPage(shop._id))
       const isPageUsed = page === artifact
       try {
         const data = { uid: '', name: '', hotline: '', mobile: '', owner: '', address: '' }
@@ -112,7 +112,7 @@ function createShopDetailTask(shop) {
         !isPageUsed && (await sleep(1000))
         await page.setExtraHTTPHeaders({
           spider: 'yiguang',
-          referer: 'https://spider.test.baixing.cn/',
+          referer: `https://spider.test.baixing.cn/detail/${uid}`,
           'Accept-Language': 'zh-CN,zh;q=0.9,en-US;q=0.8,en;'
         })
         await page.goto(url, { waitUntil: 'domcontentloaded' })
