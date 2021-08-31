@@ -190,7 +190,8 @@ function createShopDetailTask(shop) {
         data.owner = owner
 
         // 获取手机号
-        const mobileRaw = await page.evaluate(() => document.querySelector('#phone-number').innerText.split('*')[0])
+        const mobileLeft = await page.evaluate(() => document.querySelector('#phone-number').innerText.split('*')[0])
+        const mobileRight = await page.evaluate(() => document.querySelector('#phone-number').innerText.split('****')[1])
         const mobile = await page.evaluate((cookie) => new Promise(resolve => {
           console.log('[INFO] cookie', cookie)
           document.cookie = cookie
@@ -215,8 +216,8 @@ function createShopDetailTask(shop) {
             }
           })
         }), cookie)
-        log(`${mobile} VS ${mobileRaw}`)
-        if (!mobile.startsWith(mobileRaw)) {
+        log(`${mobile} VS ${mobileLeft}****${mobileRight}`)
+        if (!mobile.startsWith(mobileLeft) || !mobile.endsWith(mobileRight)) {
           await sleep(3000 * 30000)
         }
         data.mobile = mobile
