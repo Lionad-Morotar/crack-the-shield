@@ -117,7 +117,7 @@ function createShopDetailTask(shop) {
         !isPageUsed && (await sleep(1000))
         await page.setExtraHTTPHeaders({
           spider: 'yiguang',
-          referer: shop.referrer
+          referer: 'https://spider.test.baixing.cn/'
         })
         await page.goto(url, { waitUntil: 'domcontentloaded' })
 
