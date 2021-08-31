@@ -104,6 +104,29 @@ const getInstance = async () => {
   return chrome
 }
 
+// 退出命令行时关闭浏览器（防止内存泄漏）
+process.on('SIGINT', async function () {
+  await Promise.all([
+    ...DEBUG_POINT_POOL.map(async port => {
+      return new Promise(async resolve => {
+        try {
+          chrome = await puppeteer.connect({
+            browserWSEndpoint: port
+          })
+          chrome.close && chrome.close()
+          resolve()
+        } catch (e) {
+          throw new Error('[ERR] error when SIGINT', e)
+        }
+      })
+    })
+  ]).catch(e => {
+    console.log('[ERR] error when SIGINT', e)
+  }).finally(() => {
+    process.exit()
+  })
+})
+
 /**
  * 使用代理
  * 使用时需要注意 page.on('request') 的顺序
@@ -193,7 +216,7 @@ const useProxy = async (page, proxyReq) => {
       if ((e.message || '').match(/tunneling socket/)) {
         throw new Error('代理异常')
       }
-      // 不要暴露真实IP
+      // * 不要暴露真实IP
       // req.continue()
     }
   })
@@ -210,10 +233,10 @@ module.exports = {
    * 帮助函数
    **/
   utils: {
-    setViewport({ width, height } = { width: 1366, height: 768}) {
+    setViewport({ width, height } = { width: 1920, height: 1080 }) {
       return {
-        width: width || 1366,
-        height: height || 768
+        width: width || 1920,
+        height: height || 1080
       }
     }
   }
