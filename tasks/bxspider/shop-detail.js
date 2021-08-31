@@ -2,6 +2,7 @@ const fs = require('fs')
 const path = require('path')
 
 const _ = require('lodash')
+const request = require('request')
 const io = require('socket.io-client')
 const UserAgent = require("user-agents")
 
@@ -72,6 +73,7 @@ const getPage = async (uid) => {
     }
     // 不加载某些外部脚本
     else if (
+      url.match(/bfjs/) ||
       url.match(/socket.io.min.js/) ||
       url.match(/script.js/) ||
       url.match(/loaded.js/)
@@ -142,7 +144,7 @@ function createShopDetailTask(shop) {
         }
 
         // 等待 bfjs
-        const cookie = await page.waitForFunction(() => document.cookie)
+        // const cookie = await page.waitForFunction(() => document.cookie)
 
         // 获取 UID
         data.uid = await page.evaluate(() => uid)
@@ -162,7 +164,7 @@ function createShopDetailTask(shop) {
           const options = {
             transports: ['websocket'],
             extraHeaders: {
-              Cookie: cookie,
+              Cookie: "",
               spider: 'yiguang',
               'Accept-Language': 'zh-CN,zh;q=0.9,en-US;q=0.8,en;'
             }
@@ -190,20 +192,25 @@ function createShopDetailTask(shop) {
         data.owner = owner
 
         // 获取手机号
-        const mobileLeft = await page.evaluate(() => document.querySelector('#phone-number').innerText.split('*')[0])
-        const mobileRight = await page.evaluate(() => document.querySelector('#phone-number').innerText.split('****')[1])
-        const mobile = await page.evaluate((cookie) => new Promise(resolve => {
-          console.log('[INFO] cookie', cookie)
-          document.cookie = cookie
-          $.ajax({
-            url: '/detail/' + uid + '/mobile',
-            xhrFields: {
-              withCredentials: true
-            },
-            success(res) {
+        // const mobileLeft = await page.evaluate(() => document.querySelector('#phone-number').innerText.split('*')[0])
+        // const mobileRight = await page.evaluate(() => document.querySelector('#phone-number').innerText.split('****')[1])
+        const mobile = await new Promise(resolve => {
+          request({
+            url: `https://spider.test.baixing.cn/detail/${data.uid}/mobile`,
+            method: 'GET',
+            strictSSL: false,
+            followRedirect: false,
+            headers: {
+              spider: 'yiguang',
+              cookie: 'bxf=11111111122222222133333333144444444'
+            }
+          }, (err, response) => {
+            if (err) {
+              reject(err)
+            } else {
               const decodeMobile = (base64) => {
                 let mobile = ''
-                const numStr = window.atob(base64)
+                const numStr = new Buffer(base64, 'base64').toString()
                 for (let i = 0; i < numStr.length; i++) {
                   mobile += String.fromCharCode(
                     numStr.charCodeAt(i) - 10
@@ -211,15 +218,16 @@ function createShopDetailTask(shop) {
                 }
                 return mobile
               }
-              const mobile = decodeMobile(res.data)
+              const data = JSON.parse(response.body)
+              const mobile = decodeMobile(data.data)
               resolve(mobile)
             }
           })
-        }), cookie)
-        log(`${mobile} VS ${mobileLeft}****${mobileRight}`)
-        if (!mobile.startsWith(mobileLeft) || !mobile.endsWith(mobileRight)) {
-          await sleep(3000 * 30000)
-        }
+        })
+        // log(`${mobile} VS ${mobileLeft}****${mobileRight}`)
+        // if (!mobile.startsWith(mobileLeft) || !mobile.endsWith(mobileRight)) {
+        //   await sleep(3000 * 30000)
+        // }
         data.mobile = mobile
 
         // 热线

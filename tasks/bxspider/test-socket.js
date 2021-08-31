@@ -2,7 +2,8 @@ const io = require('socket.io-client')
 
 const wsURL = 'wss://spider.test.baixing.cn'
 const uid = "6b872c484fd7484390d8fd87a489120b"
-const cookie = "bxf=4b26fc601742a78be16c4ed646177b93054"
+// const cookie = "bxf=4b26fc601742a78be16c4ed646177b93054"
+const cookie = "bxf=123"
 
 new Promise(resolve => {
   const options = {
