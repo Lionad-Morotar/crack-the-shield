@@ -16,6 +16,8 @@ const preloadFile = fs.readFileSync(dir('src/preload.js'), 'utf8')
 
 const antiSlider = require('./anti-slider.js')
 
+console.log('NODE_ENV:', process.env.NODE_ENV)
+
 const isProd = process.env.NODE_ENV === 'production'
 const config = isProd
   ? {
@@ -25,6 +27,15 @@ const config = isProd
     dbname: 'spider',
     baseurl: 'https://spider.test.baixing.cn/detail/'
   }
+
+let errorAccumulated = 0
+const errorAcc = score => {
+  errorAccumulated += score
+  if (errorAccumulated > 50) {
+    process.exit()
+  }
+}
+const errorDec = score => (errorAccumulated -= score)
 
 // 初始化浏览器
 const getPage = async (uid) => {
@@ -161,6 +172,8 @@ function createShopDetailTask(shop) {
         const owner = await new Promise((resolve, reject) => {
           const errTick = setTimeout(() => reject('WS超时'), 5 * 1000)
           const options = {
+            reconnection: false,
+            timeout: 10000,
             transports: ['websocket'],
             extraHeaders: {
               spider: 'yiguang',
@@ -286,6 +299,7 @@ function createShopDetailTask(shop) {
         log(`DONE：${page._USE_PROXY} ${JSON.stringify(data)} ${k}`)
 
         // await sleep(1000 * 1000)
+        errorDec(Math.floor(errorAccumulated / 2))
         await page.close()
         // page._useTime = (page._useTime || 0) + 1
         // const useMore = !page._noUseMore && (page._useTime < 20)
@@ -302,6 +316,15 @@ function createShopDetailTask(shop) {
         if (page && page.close) {
           await page.close()
         }
+
+        /* 短时间内出错次数太多则重启 */
+        let score
+        if (err.message.match(/WS超时/)) {
+          score = 5
+        } else {
+          score = 1
+        }
+        errorAcc(score)
 
       } finally {
         // await browser.close()
