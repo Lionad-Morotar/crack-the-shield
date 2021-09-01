@@ -38,11 +38,13 @@ const getPage = async (uid) => {
   await page.evaluateOnNewDocument(waitUntilPropsLoaded)
   await page.evaluateOnNewDocument(styles)
   await page.setViewport(utils.setViewport())
-  // const userAgent = new UserAgent({
-  //   deviceCategory: "desktop",
-  //   platform: "Win32",
-  // })
-  // await page.setUserAgent(userAgent.toString())
+  const userAgent = new UserAgent({
+    deviceCategory: "desktop",
+    platform: "Win32",
+  })
+  const userAgentStr = userAgent.toString()
+  page._ua = userAgentStr
+  await page.setUserAgent(userAgentStr)
   let fingerprint
   await page.setRequestInterception(true)
   await useProxy(page, req => {
@@ -111,8 +113,9 @@ function createShopDetailTask(shop) {
   return {
     id: k,
     async run({ collection, artifact }) {
+      let page
       try {
-        const page = artifact || (await getPage(shop._id))
+        page = artifact || (await getPage(shop._id))
         const isPageUsed = page === artifact
         const data = { uid: '', name: '', hotline: '', mobile: '', owner: '', address: '' }
 
@@ -321,7 +324,7 @@ connectDB().then(async mongo => {
 
   await new Crawler({
     collection: shopCollection,
-    maxConcurrenceCount: 1,
+    maxConcurrenceCount: 3,
     interval: Math.random() * 500 + 500,
   })
     .exec(todos)
