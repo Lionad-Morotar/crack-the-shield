@@ -1,7 +1,6 @@
 const fs = require('fs')
 const path = require('path')
 
-const _ = require('lodash')
 const request = require('request')
 const io = require('socket.io-client')
 const UserAgent = require("user-agents")
@@ -322,7 +321,7 @@ connectDB().then(async mongo => {
 
   await new Crawler({
     collection: shopCollection,
-    maxConcurrenceCount: 4,
+    maxConcurrenceCount: 10,
     interval: Math.random() * 500 + 500,
   })
     .exec(todos)

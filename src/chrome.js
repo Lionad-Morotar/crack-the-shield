@@ -1,5 +1,7 @@
 const fs = require('fs')
 const path = require('path')
+
+const _ = require('lodash')
 const request = require('request')
 const puppeteer = require('puppeteer-extra')
 const StealthPlugin = require('puppeteer-extra-plugin-stealth')
@@ -21,8 +23,8 @@ puppeteer.use(StealthPlugin())
 const verifySlideMainCSS = fs.readFileSync(dir('statics/verifySlide.main.css'))
 const verifySlideMainJS = fs.readFileSync(dir('statics/verifySlide.main.js'))
 
-const MAX = 1
-const BROWSER_POOL = []
+// TODO max instance num
+let BROWSER_POOL = []
 const MINARGS = [
   '--autoplay-policy=user-gesture-required',
   '--disable-background-networking',
@@ -115,6 +117,7 @@ const getInstance = async ({ maxTabs }) => {
   let instance = null
   let chrome = null
   try {
+    BROWSER_POOL = _.shuffle(BROWSER_POOL)
     const noBusyInstance = BROWSER_POOL.find(x => {
       return x.isBusy && !x.isBusy()
     })
