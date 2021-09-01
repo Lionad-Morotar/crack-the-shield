@@ -171,12 +171,6 @@ function createShopDetailTask(shop) {
               resolve(owner)
             })
           })
-          ws.on('error', () => {
-            throw new Error("Couldn't connect to wss")
-          })
-          ws.on('disconnect', () => {
-            throw new Error("Couldn't connect to wss")
-          })
         }).then(data => {
           return data
         }).catch(error => {
