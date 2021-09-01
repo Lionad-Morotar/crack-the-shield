@@ -9,6 +9,8 @@ const { log, dir } = require('../utils')
 const { getProxy } = require('./private/dailiyun')
 const { proxyURL, getAuthorization } = require('./private/xdaili')
 
+const isProd = process.env.NODE_ENV === 'production'
+
 // const USE_PROXY = ''
 const USE_PROXY = 'XDAILI'
 // const USE_PROXY = 'DAILIYUN'
@@ -20,7 +22,7 @@ const verifySlideMainCSS = fs.readFileSync(dir('statics/verifySlide.main.css'))
 const verifySlideMainJS = fs.readFileSync(dir('statics/verifySlide.main.js'))
 
 const MAX = 1
-const DEBUG_POINT_POOL = []
+const BROWSER_POOL = []
 const MINARGS = [
   '--autoplay-policy=user-gesture-required',
   '--disable-background-networking',
@@ -67,28 +69,41 @@ const MINARGS = [
 ]
 
 // 创建实例以供之后使用
-const createInstance = async () => {
+const createInstance = async ({ maxTabs }) => {
   let browser
   // 混淆指纹插件
   const antiCanvasFPExtPath = path.join(__dirname, '../extension/anti-canvas-fp')
   try {
     browser = await puppeteer.launch({
+      // headless: true,
       headless: false,
       ignoreHTTPSErrors: true,
-      devtools: true,
-      userDataDir: '../cache',
+      devtools: !isProd,
       // executablePath: 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
       args: [
         ...MINARGS,
-        ...(!USE_PROXY ? [] : [
-          `--disable-extensions-except=${antiCanvasFPExtPath}`,
-          `--load-extension=${antiCanvasFPExtPath}`
-        ])
+        // TODO
+        // ...(!USE_PROXY ? [] : [
+        //   `--disable-extensions-except=${antiCanvasFPExtPath}`,
+        //   `--load-extension=${antiCanvasFPExtPath}`
+        // ])
       ],
     })
+    /* 存入池中 */
     debugPort = await browser.wsEndpoint()
-    DEBUG_POINT_POOL.push(debugPort)
-    return browser
+    const instance = {
+      id: String(+new Date()) + '-' + String(Math.random()).slice(-6),
+      tabs: 0,
+      port: debugPort,
+      isBusy () {
+        // console.log(`${this.id} tabs num: ${this.tabs}`)
+        return maxTabs
+          ? this.tabs >= maxTabs
+          : false
+      }
+    }
+    BROWSER_POOL.push(instance)
+    return instance
   } catch (error) {
     log('[ERR]', error)
     browser && browser.close && browser.close()
@@ -96,27 +111,50 @@ const createInstance = async () => {
 }
 
 // 如果缓存池有空闲，则从缓存池中取浏览器实例
-const getInstance = async () => {
+const getInstance = async ({ maxTabs }) => {
+  let instance = null
   let chrome = null
-  // TODO 多浏览器实例
   try {
-    const port = DEBUG_POINT_POOL.find(x => x)
-    if (port) {
+    const noBusyInstance = BROWSER_POOL.find(x => {
+      return x.isBusy && !x.isBusy()
+    })
+    if (noBusyInstance) {
+      instance = noBusyInstance
       // https://github.com/puppeteer/puppeteer/issues/5401
-      chrome = await puppeteer.connect({ browserWSEndpoint: port })
+      chrome = await puppeteer.connect({
+        browserWSEndpoint: noBusyInstance.port
+      })
     } else {
-      chrome = await createInstance()
+      instance = await createInstance({ maxTabs })
+      chrome = await puppeteer.connect({
+        browserWSEndpoint: instance.port
+      })
     }
+
+    /* 根据标签页数量判断浏览器是否空闲 */
+    const _newPage = chrome.newPage
+    chrome.newPage = async (...args) => {
+      const page = await _newPage.bind(chrome)(...args)
+      instance.tabs += 1
+      const _close = page.close
+      page.close = async (...args) => {
+        _close.bind(page)(...args)
+        instance.tabs -= 1
+      }
+      return page
+    }
+    
   } catch (error) {
     log('[ERR] get instance error', error)
   }
+
   return chrome
 }
 
 // 退出命令行时关闭浏览器（防止内存泄漏）
 process.on('SIGINT', async function () {
   await Promise.all([
-    ...DEBUG_POINT_POOL.map(async port => {
+    ...BROWSER_POOL.map(async port => {
       return new Promise(async resolve => {
         try {
           chrome = await puppeteer.connect({
@@ -232,9 +270,11 @@ const useProxy = async (page, proxyReq) => {
         req.continue()
       }
     } catch (e) {
-      console.error('[ERR]', e)
       if ((e.message || '').match(/tunneling socket/)) {
         throw new Error('代理异常')
+      } else {
+        console.error('[ERR]', e)
+        throw new Error('未知请求错误')
       }
       // * 不要暴露真实IP
       // req.continue()

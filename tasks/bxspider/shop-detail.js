@@ -28,12 +28,11 @@ const config = isProd
   }
 
 // 初始化浏览器
-const browser = (async () => await getBrowser())()
 const getPage = async (uid) => {
-  const instance = await browser
-  const page = await instance.newPage()
+  const chrome = await getBrowser({ maxTabs: 2 })
+  const page = await chrome.newPage()
   page._timeRatio = 1
-  await page.setDefaultNavigationTimeout(8 * 1000)
+  await page.setDefaultNavigationTimeout(5 * 1000)
   await page.evaluateOnNewDocument(preloadFile)
   await page.evaluateOnNewDocument(waitUntil)
   await page.evaluateOnNewDocument(waitUntilLoaded)
@@ -161,8 +160,8 @@ function createShopDetailTask(shop) {
           const options = {
             transports: ['websocket'],
             extraHeaders: {
-              Cookie: "",
               spider: 'yiguang',
+              Cookie: "",
               'Accept-Language': 'zh-CN,zh;q=0.9,en-US;q=0.8,en;'
             }
           }
@@ -293,7 +292,7 @@ function createShopDetailTask(shop) {
 
       } catch (err) {
 
-        console.log(err)
+        console.log(err.message)
         log.error(err.message)
         this.addTask(createShopDetailTask(shop))
         // await sleep(1000 * 1000)
@@ -329,7 +328,7 @@ connectDB().then(async mongo => {
 
   await new Crawler({
     collection: shopCollection,
-    maxConcurrenceCount: 3,
+    maxConcurrenceCount: 4,
     interval: Math.random() * 500 + 500,
   })
     .exec(todos)
