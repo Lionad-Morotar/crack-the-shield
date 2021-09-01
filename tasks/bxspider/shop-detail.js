@@ -292,7 +292,9 @@ function createShopDetailTask(shop) {
         log.error(err.message)
         this.addTask(createShopDetailTask(shop))
         // await sleep(1000 * 1000)
-        await page.close()
+        if (page && page.close) {
+          await page.close()
+        }
 
       } finally {
         // await browser.close()
