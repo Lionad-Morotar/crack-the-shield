@@ -200,7 +200,7 @@ function createShopDetailTask(shop) {
             }
           }, (err, response) => {
             if (err) {
-              reject(err)
+              throw new Error(err)
             } else {
               const decodeMobile = (base64) => {
                 let mobile = ''
