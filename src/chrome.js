@@ -191,10 +191,10 @@ const useProxy = async (page, proxyReq) => {
   if (proxy) {
     log('[INFO] 页面使用代理：' + proxy)
   }
-  if (proxy === 'http://Lionad:646474337@') {
-    throw new Error(`[ERR] 代理获取错误`)
-  }
   await page.on('request', async req => {
+    if (proxy === 'http://Lionad:646474337@') {
+      throw new Error(`[ERR] 代理获取错误`)
+    }
     try {
       let url = req.url()
       const resType = req.resourceType()
