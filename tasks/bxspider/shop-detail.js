@@ -200,7 +200,7 @@ function createShopDetailTask(shop) {
             }
           }, (err, response) => {
             if (err) {
-              throw new Error(err)
+              reject(err)
             } else {
               const decodeMobile = (base64) => {
                 let mobile = ''
@@ -217,6 +217,10 @@ function createShopDetailTask(shop) {
               resolve(mobile)
             }
           })
+        }).then(mobile => {
+          return mobile
+        }).catch(error => {
+          throw new Error(error)
         })
         // log(`${mobile} VS ${mobileLeft}****${mobileRight}`)
         // if (!mobile.startsWith(mobileLeft) || !mobile.endsWith(mobileRight)) {
@@ -273,6 +277,8 @@ function createShopDetailTask(shop) {
               }
             })
           })
+        }).catch(error => {
+          throw new Error(error)
         })
 
         log(`DONE：${k} ${JSON.stringify(data)}`)
