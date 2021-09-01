@@ -158,7 +158,8 @@ function createShopDetailTask(shop) {
 
         // 获取号主
         await page.hover('#view-owner')
-        const owner = await new Promise(resolve => {
+        const owner = await new Promise((resolve, reject) => {
+          const errTick = setTimeout(() => reject('WS超时'), 5 * 1000)
           const options = {
             transports: ['websocket'],
             extraHeaders: {
@@ -170,6 +171,9 @@ function createShopDetailTask(shop) {
           const ws = io('wss://spider.test.baixing.cn', options)
           ws.on('connect', () => {
             ws.emit('i-want-a-name', data.uid, owner => {
+              if (errTick) {
+                clearTimeout(errTick)
+              }
               resolve(owner)
             })
           })
@@ -183,7 +187,7 @@ function createShopDetailTask(shop) {
         // 获取手机号
         // const mobileLeft = await page.evaluate(() => document.querySelector('#phone-number').innerText.split('*')[0])
         // const mobileRight = await page.evaluate(() => document.querySelector('#phone-number').innerText.split('****')[1])
-        const mobile = await new Promise(resolve => {
+        const mobile = await new Promise((resolve, reject) => {
           request({
             url: `https://spider.test.baixing.cn/detail/${data.uid}/mobile`,
             method: 'GET',
@@ -195,6 +199,7 @@ function createShopDetailTask(shop) {
             }
           }, (err, response) => {
             if (err) {
+              console.log('获取手机号出错')
               reject(err)
             } else {
               const decodeMobile = (base64) => {
@@ -256,6 +261,7 @@ function createShopDetailTask(shop) {
         await new Promise((resolve, reject) => {
           shopCollection.deleteMany({ _id: k }, function (err) {
             if (err) {
+              console.log('保存前删除店铺数据错误')
               reject(err)
             }
             const newData = {
@@ -266,6 +272,7 @@ function createShopDetailTask(shop) {
             }
             shopCollection.insertOne(newData, function (err) {
               if (err) {
+                console.log('保存店铺数据错误')
                 reject(err)
               } else {
                 resolve()
@@ -326,7 +333,7 @@ connectDB().then(async mongo => {
 
   await new Crawler({
     collection: shopCollection,
-    maxConcurrenceCount: 2,
+    maxConcurrenceCount: 20,
     interval: Math.random() * 500 + 500,
   })
     .exec(todos)

@@ -126,6 +126,7 @@ function getShopListTask(k, v) {
           shops.map(shop => new Promise((resolve, reject) => {
             shopCollection.deleteMany({ _id: shop.id }, function (err) {
               if (err) {
+                console.log('保存前删除店铺数据错误')
                 reject(err)
               }
               const data = {
@@ -135,6 +136,7 @@ function getShopListTask(k, v) {
               }
               shopCollection.insertOne(data, function (err) {
                 if (err) {
+                  console.log('储存店铺数据错误')
                   reject(err)
                 } else {
                   resolve()
@@ -149,10 +151,12 @@ function getShopListTask(k, v) {
         await new Promise((resolve, reject) => {
           collection.deleteMany({ _id: k }, function (err) {
             if (err) {
+              console.log('保存前删除列表页面数据错误')
               reject(err)
             }
             collection.insertOne(data, function (err) {
               if (err) {
+                console.log('储存列表页数据错误')
                 reject(err)
               } else {
                 resolve()

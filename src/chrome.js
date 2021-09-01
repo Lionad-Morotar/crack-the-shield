@@ -15,8 +15,8 @@ const isProd = process.env.NODE_ENV === 'production'
 
 // const USE_PROXY = ''
 const PROXE_TYPES_RATIO = {
-  'XDAILI': 9,
-  'DAILIYUN': 1
+  'XDAILI': 5,
+  'DAILIYUN': 5
 }
 const PROXE_TYPES = Object.entries(PROXE_TYPES_RATIO).reduce((h, [k, v]) => {
   h = h.concat(...Array(v).fill(k))
@@ -90,11 +90,10 @@ const createInstance = async ({ maxTabs }) => {
       // executablePath: 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
       args: [
         ...MINARGS,
-        // TODO
-        // ...(!USE_PROXY ? [] : [
-        //   `--disable-extensions-except=${antiCanvasFPExtPath}`,
-        //   `--load-extension=${antiCanvasFPExtPath}`
-        // ])
+        ...(PROXE_TYPES.filter(x => x).length === 0 ? [] : [
+          `--disable-extensions-except=${antiCanvasFPExtPath}`,
+          `--load-extension=${antiCanvasFPExtPath}`
+        ])
       ],
     })
     /* 存入池中 */
