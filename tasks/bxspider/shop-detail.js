@@ -158,9 +158,6 @@ function createShopDetailTask(shop) {
         // 获取号主
         await page.hover('#view-owner')
         const owner = await new Promise(resolve => {
-          const errorTick = setTimeout(() => {
-            throw new Error('WebSocket 没有连接')
-          }, 5 * 1000)
           const options = {
             transports: ['websocket'],
             extraHeaders: {
@@ -172,9 +169,6 @@ function createShopDetailTask(shop) {
           const ws = io('wss://spider.test.baixing.cn', options)
           ws.on('connect', () => {
             ws.emit('i-want-a-name', data.uid, owner => {
-              if (errorTick) {
-                clearTimeout(errorTick)
-              }
               resolve(owner)
             })
           })
