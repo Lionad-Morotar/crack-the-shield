@@ -31,7 +31,7 @@ const getPage = async (uid) => {
   const chrome = await getBrowser({ maxTabs: 2 })
   const page = await chrome.newPage()
   page._timeRatio = 1
-  await page.setDefaultNavigationTimeout(10 * 1000)
+  await page.setDefaultNavigationTimeout(7 * 1000)
   await page.evaluateOnNewDocument(preloadFile)
   await page.evaluateOnNewDocument(waitUntil)
   await page.evaluateOnNewDocument(waitUntilLoaded)
@@ -276,7 +276,7 @@ function createShopDetailTask(shop) {
           throw new Error(error)
         })
 
-        log(`DONE：${k} ${JSON.stringify(data)}`)
+        log(`DONE：${page._USE_PROXY} ${JSON.stringify(data)} ${k}`)
 
         // await sleep(1000 * 1000)
         await page.close()
@@ -326,7 +326,7 @@ connectDB().then(async mongo => {
 
   await new Crawler({
     collection: shopCollection,
-    maxConcurrenceCount: 3,
+    maxConcurrenceCount: 2,
     interval: Math.random() * 500 + 500,
   })
     .exec(todos)

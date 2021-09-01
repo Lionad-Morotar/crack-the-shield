@@ -14,8 +14,14 @@ const { proxyURL, getAuthorization } = require('./private/xdaili')
 const isProd = process.env.NODE_ENV === 'production'
 
 // const USE_PROXY = ''
-// const USE_PROXY = 'XDAILI'
-const USE_PROXY = 'DAILIYUN'
+const PROXE_TYPES_RATIO = {
+  'XDAILI': 9,
+  'DAILIYUN': 1
+}
+const PROXE_TYPES = Object.entries(PROXE_TYPES_RATIO).reduce((h, [k, v]) => {
+  h = h.concat(...Array(v).fill(k))
+  return h
+}, [])
 
 puppeteer.use(StealthPlugin())
 // puppeteer.use(UAPlugin())
@@ -77,8 +83,8 @@ const createInstance = async ({ maxTabs }) => {
   const antiCanvasFPExtPath = path.join(__dirname, '../extension/anti-canvas-fp')
   try {
     browser = await puppeteer.launch({
-      // headless: true,
-      headless: false,
+      headless: true,
+      // headless: false,
       ignoreHTTPSErrors: true,
       devtools: !isProd,
       // executablePath: 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
@@ -128,6 +134,7 @@ const getInstance = async ({ maxTabs }) => {
         browserWSEndpoint: noBusyInstance.port
       })
     } else {
+      await new Promise(resolve => setTimeout(resolve, Math.random() * 300))
       instance = await createInstance({ maxTabs })
       chrome = await puppeteer.connect({
         browserWSEndpoint: instance.port
@@ -183,13 +190,15 @@ process.on('SIGINT', async function () {
  **/
 const useProxy = async (page, proxyReq) => {
   await page.setRequestInterception(true)
+  const USE_PROXY = _.shuffle(PROXE_TYPES)[0]
+  page._USE_PROXY = USE_PROXY
   const proxy = USE_PROXY === ''
     ? ''
     : USE_PROXY === 'DAILIYUN'
       ? await getProxy()
       : proxyURL
   if (proxy) {
-    log('[INFO] 页面使用代理：' + proxy)
+    log('[INFO] 代理：' + proxy)
   }
   await page.on('request', async req => {
     if (proxy === 'http://Lionad:646474337@') {
