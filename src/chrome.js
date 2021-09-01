@@ -14,8 +14,8 @@ const { proxyURL, getAuthorization } = require('./private/xdaili')
 const isProd = process.env.NODE_ENV === 'production'
 
 // const USE_PROXY = ''
-const USE_PROXY = 'XDAILI'
-// const USE_PROXY = 'DAILIYUN'
+// const USE_PROXY = 'XDAILI'
+const USE_PROXY = 'DAILIYUN'
 
 puppeteer.use(StealthPlugin())
 // puppeteer.use(UAPlugin())
@@ -190,6 +190,9 @@ const useProxy = async (page, proxyReq) => {
       : proxyURL
   if (proxy) {
     log('[INFO] 页面使用代理：' + proxy)
+  }
+  if (proxy === 'http://Lionad:646474337@') {
+    throw new Error(`[ERR] 代理获取错误`)
   }
   await page.on('request', async req => {
     try {

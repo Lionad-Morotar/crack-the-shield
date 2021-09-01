@@ -31,7 +31,7 @@ const getPage = async (uid) => {
   const chrome = await getBrowser({ maxTabs: 2 })
   const page = await chrome.newPage()
   page._timeRatio = 1
-  await page.setDefaultNavigationTimeout(5 * 1000)
+  await page.setDefaultNavigationTimeout(10 * 1000)
   await page.evaluateOnNewDocument(preloadFile)
   await page.evaluateOnNewDocument(waitUntil)
   await page.evaluateOnNewDocument(waitUntilLoaded)
@@ -111,9 +111,9 @@ function createShopDetailTask(shop) {
   return {
     id: k,
     async run({ collection, artifact }) {
-      const page = artifact || (await getPage(shop._id))
-      const isPageUsed = page === artifact
       try {
+        const page = artifact || (await getPage(shop._id))
+        const isPageUsed = page === artifact
         const data = { uid: '', name: '', hotline: '', mobile: '', owner: '', address: '' }
 
         const url = `${config.baseurl}${k}`
@@ -321,7 +321,7 @@ connectDB().then(async mongo => {
 
   await new Crawler({
     collection: shopCollection,
-    maxConcurrenceCount: 10,
+    maxConcurrenceCount: 1,
     interval: Math.random() * 500 + 500,
   })
     .exec(todos)
