@@ -33,7 +33,11 @@ connectDB().then(async mongo => {
     return h
   }, [])
 
-  const results = 'name,owner,address,mobile,hotline\n' + res.join('\n')
+  const BOM = Buffer.from('\uFEFF')
+  const results = Buffer.concat([
+    BOM,
+    Buffer.from('name,owner,address,mobile,hotline\r\n' + res.join('\r\n'))
+  ])
 
-  fs.writeFileSync(path.join(__dirname, './杨韵澍.csv'), results)
+  fs.writeFileSync(path.join(__dirname, './杨韵澍.csv'), results.toString(), 'utf-8')
 })
