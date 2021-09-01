@@ -243,10 +243,12 @@ function createShopDetailTask(shop) {
 
         // 地址和热线的 OCR
         const $ocr = await page.evaluateHandle(() => document.querySelector('.center-second'))
+        await page.bringToFront()
         const ocrContent = await $ocr.screenshot({
           type: 'png',
           encoding: 'base64'
         })
+        await page.bringToFront()
         const ocrRes = await ocr(ocrContent)
         try {
           data.address = filterSpace(ocrRes.words_result[0].words)
@@ -327,7 +329,7 @@ connectDB().then(async mongo => {
 
   await new Crawler({
     collection: shopCollection,
-    maxConcurrenceCount: 1,
+    maxConcurrenceCount: 3,
     interval: Math.random() * 500 + 500,
   })
     .exec(todos)
