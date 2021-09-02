@@ -58,7 +58,22 @@ function findTroughs(array) {
   return troughs
 }
 
+const autoRun = async (taskFn, opts = {}) => {
+  const {
+    name = '',
+    until = () => false
+  } = opts
+  while (true) {
+    log(`【TASK BEGIN】${name}`)
+    await taskFn()
+    if (until()) {
+      break
+    }
+  }
+}
+
 module.exports = {
+  autoRun,
   dir,
   sleep,
   filterSpace,

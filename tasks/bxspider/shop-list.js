@@ -4,7 +4,9 @@ const UserAgent = require("user-agents")
 const connectDB = require('../../src/connect-db')
 const Crawler = require('../../src/crawler')
 const { getBrowser, useProxy, utils } = require('../../src/chrome')
-const { sleep, log } = require('../../utils')
+
+const { autoRun, sleep, log } = require('../../utils')
+const { findInCollection } = require('../../utils/db')
 const { waitUntil, waitUntilLoaded, waitUntilPropsLoaded } = require('../../utils/dom')
 
 const base = require('./config')
@@ -195,33 +197,28 @@ function getShopListTask(k, v) {
 connectDB().then(async mongo => {
   const db = mongo.db(config.dbname)
   shopCollection = db.collection('shops')
+  const listCollection = db.collection('shop-list')
 
-  /* 排列列表页面任务 */
-
-  const listCollection = db.collection('shop-list-page')
-  const finds = await new Promise((resolve, reject) => {
-    listCollection.find({}).toArray(function (err, res) {
-      if (err) {
-        reject(err)
-      } else {
-        resolve(res)
-      }
+  const runShopListTasks = async () => {
+    const allLists = await findInCollection(listCollection)
+    const todos = shopListPageTasks.filter(x => !allLists.find(y => y._id === x.id))
+    log(`剩余${todos.length}个列表页任务`)
+  
+    await new Crawler({
+      collection: listCollection,
+      maxConcurrenceCount: 1,
+      interval: Math.random() * 500 + 100,
     })
+      .exec(todos)
+      .then(() => {
+        log(`【TASK DONE】`)
+      })
+      .catch(error => {
+        log.error(`【TASK ERROR】 ${error.message}`)
+      })
+  }
+
+  autoRun(runShopListTasks, {
+    name: '店铺列表页任务'
   })
-  const todos = shopListPageTasks.filter(x => !finds.find(y => y._id === x.id))
-  log(`剩余${todos.length}个列表页任务`)
-
-  await new Crawler({
-    collection: listCollection,
-    maxConcurrenceCount: 3,
-    interval: Math.random() * 500 + 500,
-  })
-    .exec(todos)
-    .then(() => {
-      log(`task done`)
-    })
-    .catch(error => {
-      log.error(`task error ${error.message}`)
-    })
-
 })

@@ -15,6 +15,19 @@ const asyncify = collection => {
   return collection
 }
 
+const findInCollection = async (collection, condition = {}) => {
+  return new Promise((resolve, reject) => {
+    collection.find(condition).toArray(function (err, res) {
+      if (err) {
+        reject(err)
+      } else {
+        resolve(res)
+      }
+    })
+  })
+}
+
 module.exports = {
-  asyncify
+  asyncify,
+  findInCollection
 }

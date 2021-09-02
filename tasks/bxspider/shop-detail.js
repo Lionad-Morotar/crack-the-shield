@@ -9,7 +9,9 @@ const ocr = require('../../plugins/ocr')
 const connectDB = require('../../src/connect-db')
 const Crawler = require('../../src/crawler')
 const { getBrowser, useProxy, utils } = require('../../src/chrome')
-const { dir, sleep, filterSpace, log } = require('../../utils')
+
+const { autoRun, dir, sleep, filterSpace, log } = require('../../utils')
+const { findInCollection } = require('../../utils/db')
 const { waitUntil, waitUntilLoaded, waitUntilPropsLoaded, styles } = require('../../utils/dom')
 const base = require('./config')
 
@@ -340,33 +342,30 @@ connectDB().then(async mongo => {
   const db = mongo.db(config.dbname)
   shopCollection = db.collection('shops')
 
-  const findAlls = await new Promise((resolve, reject) => {
-    shopCollection.find({}).toArray(function (err, res) {
-      if (err) {
-        reject(err)
-      } else {
-        resolve(res)
-      }
-    })
-  })
-  const todos = findAlls.filter(x => !x.done).map(x => createShopDetailTask(x))
-  // FOR TEST
-  // const todos = [createShopDetailTask({
-  //   _id: 'f81db0d49fa24d578b3de4e7dc220805'
-  // })]
-  log(`剩余${todos.length}个详情页任务`)
+  const runShopDetailTasks = async () => {
+    const findAlls = await findInCollection(shopCollection)
+    const todos = findAlls.filter(x => !x.done).map(x => createShopDetailTask(x))
+    // FOR TEST
+    // const todos = [createShopDetailTask({
+    //   _id: 'f81db0d49fa24d578b3de4e7dc220805'
+    // })]
+    log(`剩余${todos.length}个详情页任务`)
 
-  await new Crawler({
-    collection: shopCollection,
-    maxConcurrenceCount: 20,
-    interval: Math.random() * 500 + 500,
-  })
-    .exec(todos)
-    .then(() => {
-      log(`[TASK DONE]`)
+    return await new Crawler({
+      collection: shopCollection,
+      maxConcurrenceCount: 20,
+      interval: Math.random() * 500 + 100,
     })
-    .catch(error => {
-      log.error(`[TASK ERROR] ${error.message}`)
-    })
+      .exec(todos)
+      .then(() => {
+        log(`【TASK DONE】`)
+      })
+      .catch(error => {
+        log.error(`【TASK ERROR】 ${error.message}`)
+      })
+  }
 
+  autoRun(runShopDetailTasks, {
+    name: '店铺详情页任务'
+  })
 })
