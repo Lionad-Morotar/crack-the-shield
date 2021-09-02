@@ -3,7 +3,7 @@ const UserAgent = require("user-agents")
 
 const connectDB = require('../../src/connect-db')
 const Crawler = require('../../src/crawler')
-const { getBrowser, useProxy, utils } = require('../../src/chrome')
+const { getInstance, useProxy, useRandomHeaders, utils } = require('../../src/chrome')
 
 const { autoRun, sleep, log } = require('../../utils')
 const { findInCollection } = require('../../utils/db')
@@ -19,22 +19,16 @@ const config = isProd
     dbname: 'spider',
     baseurl: `${base.url}/`
   } : {
-    isDev: true,
-    useLocalSliderNum: true,
     dbname: 'spider-test',
     // baseurl: 'http://192.168.1.7:8080/spider-main/'
     // baseurl: 'http://192.168.1.7:8080/spider-slider'
-    baseurl: 'https://www.ipaddress.com'
-    // baseurl: 'https://www.baidu.com'
   }
 
 // 初始化浏览器
-const browser = (async () => await getBrowser())()
 const getPage = async () => {
-  const instance = await browser
-  const page = await instance.newPage()
-  page._timeRatio = 2
-  await page.setExtraHTTPHeaders({
+  const chrome = await getInstance()
+  const page = await chrome.newPage()
+  await useRandomHeaders(page, {
     spider: 'yiguang',
     'Accept-Language': 'zh-CN,zh;q=0.9,en-US;q=0.8,en;'
   })
@@ -187,7 +181,7 @@ function getShopListTask(k, v) {
         await page.close()
 
       } finally {
-        // await browser.close()
+        // await chrome.close()
       }
     }
   }

@@ -4,7 +4,7 @@ const path = require('path')
 const ocr = require('../plugins/ocr')
 const { dir, mkdir, sleep, filterSpace } = require('../utils')
 const { waitUntilLoaded, waitUntilPropsLoaded, styles } = require('../utils/dom')
-const { getBrowser, utils } = require('../src/chrome')
+const { getInstance, utils } = require('../src/chrome')
 const preloadFile = fs.readFileSync(path.join(__dirname, '../src/preload.js'), 'utf8')
 const socketIOFile = fs.readFileSync(path.join(__dirname, '../statics/socket.io.min.js'), 'utf8')
 
@@ -13,7 +13,7 @@ console.log('url:', url)
 
 !(async () => {
   try {
-    const browser = await getBrowser()
+    const browser = await getInstance()
     const page = await browser.newPage()
     await page.setViewport(utils.setViewport())
     await page.evaluateOnNewDocument(preloadFile)

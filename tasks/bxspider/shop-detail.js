@@ -8,7 +8,7 @@ const UserAgent = require("user-agents")
 const ocr = require('../../plugins/ocr')
 const connectDB = require('../../src/connect-db')
 const Crawler = require('../../src/crawler')
-const { getBrowser, useProxy, utils } = require('../../src/chrome')
+const { getInstance, useProxy, useRandomHeaders, utils } = require('../../src/chrome')
 
 const { autoRun, dir, sleep, filterSpace, log } = require('../../utils')
 const { findInCollection } = require('../../utils/db')
@@ -42,9 +42,8 @@ const errorDec = score => (errorAccumulated -= score)
 
 // 初始化浏览器
 const getPage = async () => {
-  const chrome = await getBrowser({ maxTabs: 2 })
+  const chrome = await getInstance()
   const page = await chrome.newPage()
-  page._timeRatio = 1
   await page.setDefaultNavigationTimeout(7 * 1000)
   await page.evaluateOnNewDocument(preloadFile)
   await page.evaluateOnNewDocument(waitUntil)
@@ -135,17 +134,13 @@ function createShopDetailTask(shop) {
 
         const url = `${config.baseurl}${k}`
         !isPageUsed && (await sleep(1000))
-        await page.setExtraHTTPHeaders({
+        await useRandomHeaders(page, {
           spider: 'yiguang',
           referer: `${base.url}/`,
           'Accept-Language': 'zh-CN,zh;q=0.9,en-US;q=0.8,en;'
         })
         await page.goto(url, { waitUntil: 'domcontentloaded' })
-        await page.setExtraHTTPHeaders({
-          spider: 'yiguang',
-          referer: `${base.url}/detail/${k}`,
-          'Accept-Language': 'zh-CN,zh;q=0.9,en-US;q=0.8,en;'
-        })
+        await useRandomHeaders(page, { referer: `${base.url}/detail/${k}` }, page._randomHeaderSeed)
         await page.bringToFront()
         const $document = await page.evaluateHandle(() => document)
 
@@ -179,9 +174,7 @@ function createShopDetailTask(shop) {
             timeout: 10000,
             transports: ['websocket'],
             extraHeaders: {
-              spider: 'yiguang',
-              Cookie: "",
-              'Accept-Language': 'zh-CN,zh;q=0.9,en-US;q=0.8,en;'
+              spider: 'yiguang'
             }
           }
           const ws = io(base.wss, options)

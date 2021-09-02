@@ -10,6 +10,7 @@ const StealthPlugin = require('puppeteer-extra-plugin-stealth')
 const { log, dir } = require('../utils')
 const { getProxy } = require('./private/dailiyun')
 const { proxyURL, getAuthorization } = require('./private/xdaili')
+const { getRandomHeaders } = require('./random-headers')
 
 const isProd = process.env.NODE_ENV === 'production'
 
@@ -117,8 +118,8 @@ const createInstance = async ({ maxTabs }) => {
   }
 }
 
-// 如果缓存池有空闲，则从缓存池中取浏览器实例
-const getInstance = async ({ maxTabs }) => {
+// 优先从实例池中获取浏览器
+const getInstance = async ({ maxTabs = 3 }) => {
   let instance = null
   let chrome = null
   try {
@@ -150,6 +151,7 @@ const getInstance = async ({ maxTabs }) => {
         _close.bind(page)(...args)
         instance.tabs -= 1
       }
+      page._timeRatio = 1
       return page
     }
     
@@ -182,6 +184,20 @@ process.on('SIGINT', async function () {
     process.exit()
   })
 })
+
+const seeds = {}
+const useRandomHeaders = async (page, baseHeaders, seed) => {
+  let headers
+  if (seed) {
+    headers = Object.assign(seeds[seed], baseHeaders)
+  } else {
+    const randomHeaders = getRandomHeaders()
+    headers = Object.assign(randomHeaders, baseHeaders)
+    page._randomHeaderSeed = String(+new Date()) + '-' + String(Math.random()).slice(-6)
+  }
+  await page.setExtraHTTPHeaders(headers)
+  return page
+}
 
 /**
  * 使用代理
@@ -301,8 +317,9 @@ module.exports = {
    * @see https://pptr.dev/ puppeteer 文档
    **/
   chrome: puppeteer,
-  getBrowser: getInstance,
+  getInstance,
   useProxy,
+  useRandomHeaders,
   /**
    * 帮助函数
    **/
