@@ -5,7 +5,7 @@ const io = require('socket.io-client')
 
 const ocr = require('../../plugins/ocr')
 const connectDB = require('../../src/connect-db')
-const Crawler = require('../../src/crawler')
+const Tasker = require('../../src/tasker')
 const { getInstance, useProxy, useRandomHeaders, useCustomCSS, utils } = require('../../src/chrome')
 
 const { isProd, autoRun, dir, sleep, filterSpace, log } = require('../../utils')
@@ -104,7 +104,7 @@ function createShopDetailTask(shop) {
   const { _id: k, idx } = shop
   return {
     id: k,
-    async run({ collection, artifact }) {
+    async run({ artifact }) {
       let page
       try {
         page = artifact || (await getPage())
@@ -320,18 +320,14 @@ connectDB().then(async mongo => {
     // })]
     log(`剩余${todos.length}个详情页任务`)
 
-    return await new Crawler({
-      collection: shopCollection,
+    const taskConf = {
       maxConcurrenceCount: 20,
-      interval: Math.random() * 500 + 100,
-    })
-      .exec(todos)
-      .then(() => {
-        log(`【TASK DONE】`)
-      })
-      .catch(error => {
-        log.error(`【TASK ERROR】 ${error.message}`)
-      })
+      interval: () => Math.random() * 500 + 100,
+    }
+    return await new Tasker(taskConf)
+      .start(todos)
+      .then(() => log(`【TASK DONE】`))
+      .catch(error => log.error(`【TASK ERROR】 ${error.message}`))
   }
 
   autoRun(runShopDetailTasks, {

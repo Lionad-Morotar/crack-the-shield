@@ -10,6 +10,8 @@ dir.join = path.join
 
 const sleep = (time = 500) => new Promise(resolve => setTimeout(resolve, time))
 
+const uuid = () => String(+new Date()) + '-' + String(Math.random()).slice(-6)
+
 const filterSpace = str => str.replace(/\s/g, '')
 
 // 创建文件夹
@@ -72,6 +74,7 @@ module.exports = {
   dir,
   log,
   isProd,
+  uuid,
   autoRun,
   sleep,
   filterSpace,

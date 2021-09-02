@@ -1,7 +1,7 @@
 const fs = require('fs')
 
 const connectDB = require('../../src/connect-db')
-const Crawler = require('../../src/crawler')
+const Tasker = require('../../src/tasker')
 const { getInstance, useProxy, useRandomHeaders, useCustomCSS, useRandomUA, utils } = require('../../src/chrome')
 
 const { isProd, autoRun, sleep, dir, log } = require('../../utils')
@@ -94,6 +94,7 @@ const getPage = async () => {
 
 // 创建店铺列表页任务
 let shopCollection = null
+let shopListCollection = null
 function createShopListTask(shoplist) {
   const { _id, url } = shoplist
   return {
@@ -269,7 +270,7 @@ function createShopListTask(shoplist) {
 connectDB().then(async mongo => {
   const db = mongo.db(config.dbname)
   shopCollection = db.collection('shops')
-  const shopListCollection = db.collection('shop-list')
+  shopListCollection = db.collection('shop-list')
 
   if (!isProd) {
     await dropCollection(shopListCollection)
@@ -283,18 +284,14 @@ connectDB().then(async mongo => {
     const todos = [nextTask].map(x => createShopListTask(x))
     log(`START FROM SHOP NO.${todos[0].id}`)
   
-    await new Crawler({
-      collection: shopListCollection,
+    const taskConf = {
       maxConcurrenceCount: 1,
-      interval: Math.random() * 500 + 100,
-    })
-      .exec(todos)
-      .then(() => {
-        log(`【TASK DONE】`)
-      })
-      .catch(error => {
-        log.error(`【TASK ERROR】 ${error.message}`)
-      })
+      interval: () => Math.random() * 500 + 100,
+    }
+    await new Tasker(taskConf)
+      .start(todos)
+      .then(() => log(`【TASK DONE】`))
+      .catch(error => log.error(`【TASK ERROR】 ${error.message}`))
   }
 
   autoRun(runShopListTasks, {
