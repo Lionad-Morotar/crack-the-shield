@@ -16,7 +16,7 @@ const preloadFile = fs.readFileSync(dir('src/preload.js'), 'utf8')
 
 const antiSlider = require('./anti-slider.js')
 
-const config = isProd()
+const config = isProd
   ? {
     dbname: 'spider',
     baseurl: `${base.url}/detail/`
@@ -112,7 +112,7 @@ function createShopDetailTask(shop) {
         const data = { uid: '', name: '', hotline: '', mobile: '', owner: '', address: '' }
 
         const url = `${config.baseurl}${k}`
-        isProd() || !isPageUsed && (await sleep(1000))
+        isProd || !isPageUsed && (await sleep(1000))
         await useRandomHeaders(page, {
           'spider': 'yiguang',
           referer: `${base.url}/`,

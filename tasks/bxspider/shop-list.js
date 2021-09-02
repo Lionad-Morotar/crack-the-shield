@@ -11,7 +11,7 @@ const preloadFile = fs.readFileSync(dir('src/preload.js'), 'utf8')
 const base = require('./config')
 const antiSlider = require('./anti-slider.js')
 
-const config = isProd()
+const config = isProd
   ? {
     dbname: 'spider',
     baseurl: `${base.url}`
@@ -101,7 +101,7 @@ function createShopListTask(shoplist) {
       const page = artifact || (await getPage())
       const isPageUsed = page === artifact
       try {
-        isProd() || !isPageUsed && (await sleep(1000))
+        isProd || !isPageUsed && (await sleep(1000))
         await page.goto(url, { waitUntil: 'domcontentloaded' })
         await page.bringToFront()
 
@@ -156,7 +156,7 @@ function createShopListTask(shoplist) {
                 reject(err)
               } else {
                 if (res.length > 0) {
-                  if (isProd()) {
+                  if (isProd) {
                     log('重复的！不用保存了！可恶哇！')
                   }
                 } else {
@@ -270,7 +270,7 @@ connectDB().then(async mongo => {
   shopCollection = db.collection('shops')
   const shopListCollection = db.collection('shop-list')
 
-  if (!isProd()) {
+  if (!isProd) {
     await dropCollection(shopListCollection)
     await dropCollection(shopCollection)
   }

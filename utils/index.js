@@ -3,7 +3,7 @@ const path = require('path')
 const rimraf = require('rimraf').sync
 const conc = require('../plugins/conc')
 
-const isProd = () => process.env.NODE_ENV === 'production'
+const isProd = process.env.NODE_ENV === 'production'
 
 const dir = (...absPaths) => path.join(__dirname, '../', ...absPaths)
 dir.join = path.join
@@ -65,12 +65,13 @@ const autoRun = async (taskFn, opts) => {
     log(`【TASK BEGIN】${name}`)
     await taskFn()
     await sleep(timewait)
-  } while (!until() && isProd())
+  } while (!until() && isProd)
 }
 
 module.exports = {
   dir,
   log,
+  isProd,
   autoRun,
   sleep,
   filterSpace,
@@ -79,5 +80,4 @@ module.exports = {
   notEmpty,
   findTroughs,
   conc,
-  isProd
 }

@@ -84,9 +84,9 @@ const createInstance = async (conf) => {
   const antiCanvasFPExtPath = path.join(__dirname, '../extension/anti-canvas-fp')
   try {
     browser = await puppeteer.launch({
-      headless: isProd(),
+      headless: isProd,
       ignoreHTTPSErrors: true,
-      devtools: !isProd(),
+      devtools: !isProd,
       // executablePath: 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
       args: [
         ...MINARGS,
@@ -241,7 +241,7 @@ const useProxy = async (page, proxyReq) => {
     log('[INFO] 代理：' + proxy)
   }
   await page.on('request', async req => {
-    if (!proxy && isProd()) {
+    if (!proxy && isProd) {
       throw new Error(`[ERR] 代理获取错误`)
     }
     try {
