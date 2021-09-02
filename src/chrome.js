@@ -248,7 +248,7 @@ const useProxy = async (page, proxyReq) => {
       let url = req.url()
       const resType = req.resourceType()
       // 本地代理放行
-      if (url.includes('192.168')) {
+      if (url.includes('192.168') && !url.includes('9998')) {
         return req.continue()
       }
       // 内联图片放行 
@@ -328,13 +328,11 @@ const useProxy = async (page, proxyReq) => {
       if ((e.message || '').match(/tunneling socket/)) {
         throw new Error('代理异常')
       } else {
-        console.error('[ERR]', e)
         throw new Error('未知请求错误')
       }
-      // * 不要暴露真实IP
-      // req.continue()
     }
   })
+  return page
 }
 
 module.exports = {

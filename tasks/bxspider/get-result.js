@@ -9,7 +9,7 @@ connectDB().then(async mongo => {
   shopCollection = db.collection('shops')
 
   const shops = await new Promise((resolve, reject) => {
-    shopCollection.find({}).toArray(function (err, res) {
+    shopCollection.find({}).toArray((err, res) => {
       if (err) {
         reject(err)
       } else {

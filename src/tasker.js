@@ -41,7 +41,6 @@ module.exports = class Tasker {
   }
   pushResult(res) {
     this.results.push(res)
-    console.log(this.results.length, this.totalTask)
     if (this.results.length === this.totalTask) {
       this.resolver(this.results)
     }

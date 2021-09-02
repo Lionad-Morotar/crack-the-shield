@@ -17,7 +17,7 @@ const asyncify = collection => {
 
 const findInCollection = async (collection, condition = {}) => {
   return new Promise((resolve, reject) => {
-    collection.find(condition).toArray(function (err, res) {
+    collection.find(condition).toArray((err, res) => {
       if (err) {
         reject(err)
       } else {

@@ -11,10 +11,10 @@
     "statics": "http-server -p9999 ./statics",
     "db": "mongod --dbpath D:\\@Github\\crack-the-shield\\mongo",
     "result": "node ./tasks/bxspider/get-result.js",
-    "shoplist:test": "cross-env NODE_ENV=test node ./tasks/bxspider/shop-list.js",
-    "shoplist:prod": "cross-env NODE_ENV=production pm2 start ./tasks/bxspider/shop-list.js",
-    "detail:test": "cross-env NODE_ENV=test node ./tasks/bxspider/shop-detail.js",
-    "detail:prod": "cross-env NODE_ENV=production pm2 start ./tasks/bxspider/shop-detail.js"
+    "shop-list:test": "cross-env NODE_ENV=test node ./tasks/bxspider/shop-list.js",
+    "shop-list:prod": "cross-env NODE_ENV=production pm2 start ./tasks/bxspider/shop-list.js",
+    "shop-detail:test": "cross-env NODE_ENV=test node ./tasks/bxspider/shop-detail.js",
+    "shop-detail:prod": "cross-env NODE_ENV=production pm2 start ./tasks/bxspider/shop-detail.js"
   },
   "author": "Lionad",
   "license": "ISC",

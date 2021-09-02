@@ -27,7 +27,7 @@ const config = isProd
 let errorAccumulated = 0
 const errorAcc = score => {
   errorAccumulated += score
-  if (errorAccumulated > 50) {
+  if (errorAccumulated > 10) {
     process.exit()
   }
 }
@@ -52,23 +52,6 @@ const getPage = async () => {
   // 屏蔽一些不必要的请求
   await useProxy(page, req => {
     const url = req.url()
-    // 伪造指纹
-    if (url.match(/s.png\?cf=0/)) {
-      const fingerMatch = url.match(/&f=([a-zA-Z0-9]*)/)
-      if (fingerMatch) {
-        fingerprint = fingerMatch[1]
-      }
-    } else if (url.match(/s.png\?cf=1/) && !url.match(/T=T/)) {
-      // mark &T=T do not redirect again
-      const fakeURL = url.replace(/&f=[a-zA-Z0-9]*/, '&T=T&f=' + fingerprint)
-      req.respond({
-        status: 301,
-        headers: {
-          location: fakeURL
-        }
-      })
-      return false
-    }
     // 屏蔽一些不必要的请求
     if (
       url.match(/logo_baixing.png/) ||
@@ -99,7 +82,7 @@ function createShopListTask(shoplist) {
   const { _id, url } = shoplist
   return {
     id: _id,
-    async run({ collection, artifact }) {
+    async run({ artifact }) {
       const page = artifact || (await getPage())
       const isPageUsed = page === artifact
       try {
@@ -152,7 +135,7 @@ function createShopListTask(shoplist) {
         // 储存店铺数据
         await Promise.all(
           shops.map((shop, idx) => new Promise((resolve, reject) => {
-            shopCollection.find({ _id: shop.id }).toArray(function (err, res) {
+            shopCollection.find({ _id: shop.id }).toArray((err, res) => {
               if (err) {
                 log.error('保存前校验店铺数据错误')
                 reject(err)
@@ -161,6 +144,7 @@ function createShopListTask(shoplist) {
                   if (isProd) {
                     log('重复的！不用保存了！可恶哇！')
                   }
+                  resolve()
                 } else {
                   const data = {
                     _id: shop.id,
@@ -188,7 +172,7 @@ function createShopListTask(shoplist) {
 
         // 储存列表页面数据
         await new Promise((resolve, reject) => {
-          collection.deleteMany({ _id }, err => {
+          shopListCollection.deleteMany({ _id }, err => {
             if (err) {
               log('保存前删除列表页面数据错误')
               reject(err)
@@ -200,13 +184,13 @@ function createShopListTask(shoplist) {
               shops,
               done: true
             }
-            collection.insertOne(data, err => {
+            shopListCollection.insertOne(data, err => {
               if (err) {
                 log('储存列表页数据错误')
                 reject(err)
               } else {
                 if (nextPage) {
-                  collection.deleteMany({ _id: _id + 1 }, err => {
+                  shopListCollection.deleteMany({ _id: _id + 1 }, err => {
                     if (err) {
                       log('保存前删除列表页面数据错误')
                       reject(err)
@@ -216,7 +200,7 @@ function createShopListTask(shoplist) {
                       url: nextPage,
                       done: false
                     }
-                    collection.insertOne(nextTask, err => {
+                    shopListCollection.insertOne(nextTask, err => {
                       if (err) {
                         log('储存列表页数据错误')
                         reject(err)
@@ -233,12 +217,13 @@ function createShopListTask(shoplist) {
           throw new Error(error)
         })
 
-        log(`DONE：${url}`)
+        log(`DONE：NO.${_id} ${url}`)
 
-        errorDec(Math.floor(errorAccumulated / 2))
+        await sleep(1000 * 1000)
         await page.deleteCookie({ name: 'bxf' })
         await page.evaluate(() => localStorage.clear())
         await page.close()
+        errorDec(Math.floor(errorAccumulated / 2))
         // page._useTime = (page._useTime || 0) + 1
         // const useMore = !page._noUseMore && (page._useTime < 20)
         // if (useMore) {
@@ -253,13 +238,7 @@ function createShopListTask(shoplist) {
         page && page.close && (await page.close())
 
         /* 短时间内出错次数太多则重启 */
-        let score
-        if (err.message.match(/WS超时/)) {
-          score = 20
-        } else {
-          score = 5
-        }
-        errorAcc(score)
+        errorAcc(1)
 
       }
     }

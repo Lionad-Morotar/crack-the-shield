@@ -46,29 +46,11 @@ const getPage = async () => {
   await page.evaluateOnNewDocument(styles)
   await page.setViewport(utils.setViewport())
   await useRandomUA(page)
-  let fingerprint
   await page.setRequestInterception(true)
   await useProxy(page, req => {
     const url = req.url()
-    // 伪造指纹
-    if (url.match(/s.png\?cf=0/)) {
-      const fingerMatch = url.match(/&f=([a-zA-Z0-9]*)/)
-      if (fingerMatch) {
-        fingerprint = fingerMatch[1]
-      }
-    } else if (url.match(/s.png\?cf=1/) && !url.match(/T=T/)) {
-      // mark &T=T do not redirect again
-      const fakeURL = url.replace(/&f=[a-zA-Z0-9]*/, '&T=T&f=' + fingerprint)
-      req.respond({
-        status: 301,
-        headers: {
-          location: fakeURL
-        }
-      })
-      return false
-    }
     // 屏蔽一些不必要的请求
-    else if (
+    if (
       url.match(/pexels-photo/) ||
       url.match(/bfjs/) ||
       url.match(/socket.io.min.js/) ||
@@ -275,10 +257,10 @@ function createShopDetailTask(shop) {
         log(`DONE：NO.${idx} ${page._proxyType} ${JSON.stringify(data)} ${k}`)
 
         // await sleep(1000 * 1000)
-        errorDec(Math.floor(errorAccumulated / 2))
         await page.deleteCookie({ name: 'bxf' })
         await page.evaluate(() => localStorage.clear())
         await page.close()
+        errorDec(Math.floor(errorAccumulated / 2))
         // page._useTime = (page._useTime || 0) + 1
         // const useMore = !page._noUseMore && (page._useTime < 20)
         // if (useMore) {
