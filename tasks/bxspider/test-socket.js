@@ -1,6 +1,6 @@
 const io = require('socket.io-client')
+const base = require('./config')
 
-const wsURL = 'wss://spider.test.baixing.cn'
 const uid = "6b872c484fd7484390d8fd87a489120b"
 // const cookie = "bxf=4b26fc601742a78be16c4ed646177b93054"
 const cookie = "bxf=123"
@@ -13,7 +13,7 @@ new Promise(resolve => {
       spider: 'yiguang'
     }
   }
-  const ws = io(wsURL, options)
+  const ws = io(base.wss, options)
   console.log('wait for connected ...')
   ws.on('connect', () => {
     ws.emit('i-want-a-name', uid, owner => resolve(owner))

@@ -6,6 +6,8 @@ const Crawler = require('../../src/crawler')
 const { getBrowser, useProxy, utils } = require('../../src/chrome')
 const { sleep, log } = require('../../utils')
 const { waitUntil, waitUntilLoaded, waitUntilPropsLoaded } = require('../../utils/dom')
+
+const base = require('./config')
 const pageMap = require('./page.json')
 const antiSlider = require('./anti-slider.js')
 
@@ -13,7 +15,7 @@ const isProd = process.env.NODE_ENV === 'production'
 const config = isProd
   ? {
     dbname: 'spider',
-    baseurl: 'https://spider.test.baixing.cn/'
+    baseurl: `${base.url}/`
   } : {
     isDev: true,
     useLocalSliderNum: true,

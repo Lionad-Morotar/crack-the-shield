@@ -1,7 +1,8 @@
+const base = require('./config')
 const request = require('request')
 
 request({
-  url: 'https://spider.test.baixing.cn/detail/e9a18e1dd1c64cd09833c0fd45e7bc06/mobile',
+  url: `${base.url}/detail/e9a18e1dd1c64cd09833c0fd45e7bc06/mobile`,
   method: 'GET',
   strictSSL: false,
   followRedirect: false,

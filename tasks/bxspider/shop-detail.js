@@ -9,8 +9,9 @@ const ocr = require('../../plugins/ocr')
 const connectDB = require('../../src/connect-db')
 const Crawler = require('../../src/crawler')
 const { getBrowser, useProxy, utils } = require('../../src/chrome')
-const { dir, mkdir, sleep, filterSpace, log } = require('../../utils')
+const { dir, sleep, filterSpace, log } = require('../../utils')
 const { waitUntil, waitUntilLoaded, waitUntilPropsLoaded, styles } = require('../../utils/dom')
+const base = require('./config')
 
 const preloadFile = fs.readFileSync(dir('src/preload.js'), 'utf8')
 
@@ -22,10 +23,10 @@ const isProd = process.env.NODE_ENV === 'production'
 const config = isProd
   ? {
     dbname: 'spider',
-    baseurl: 'https://spider.test.baixing.cn/detail/'
+    baseurl: `${base.url}/detail/`
   } : {
     dbname: 'spider',
-    baseurl: 'https://spider.test.baixing.cn/detail/'
+    baseurl: `${base.url}/detail/`
   }
 
 let errorAccumulated = 0
@@ -38,7 +39,7 @@ const errorAcc = score => {
 const errorDec = score => (errorAccumulated -= score)
 
 // 初始化浏览器
-const getPage = async (uid) => {
+const getPage = async () => {
   const chrome = await getBrowser({ maxTabs: 2 })
   const page = await chrome.newPage()
   page._timeRatio = 1
@@ -126,7 +127,7 @@ function createShopDetailTask(shop) {
     async run({ collection, artifact }) {
       let page
       try {
-        page = artifact || (await getPage(shop._id))
+        page = artifact || (await getPage())
         const isPageUsed = page === artifact
         const data = { uid: '', name: '', hotline: '', mobile: '', owner: '', address: '' }
 
@@ -134,13 +135,13 @@ function createShopDetailTask(shop) {
         !isPageUsed && (await sleep(1000))
         await page.setExtraHTTPHeaders({
           spider: 'yiguang',
-          referer: `https://spider.test.baixing.cn/`,
+          referer: `${base.url}/`,
           'Accept-Language': 'zh-CN,zh;q=0.9,en-US;q=0.8,en;'
         })
         await page.goto(url, { waitUntil: 'domcontentloaded' })
         await page.setExtraHTTPHeaders({
           spider: 'yiguang',
-          referer: `https://spider.test.baixing.cn/detail/${k}`,
+          referer: `${base.url}/detail/${k}`,
           'Accept-Language': 'zh-CN,zh;q=0.9,en-US;q=0.8,en;'
         })
         await page.bringToFront()
@@ -181,7 +182,7 @@ function createShopDetailTask(shop) {
               'Accept-Language': 'zh-CN,zh;q=0.9,en-US;q=0.8,en;'
             }
           }
-          const ws = io('wss://spider.test.baixing.cn', options)
+          const ws = io(base.wss, options)
           ws.on('connect', () => {
             ws.emit('i-want-a-name', data.uid, owner => {
               if (errTick) {
@@ -198,11 +199,11 @@ function createShopDetailTask(shop) {
         data.owner = owner
 
         // 获取手机号
-        // const mobileLeft = await page.evaluate(() => document.querySelector('#phone-number').innerText.split('*')[0])
-        // const mobileRight = await page.evaluate(() => document.querySelector('#phone-number').innerText.split('****')[1])
+        const mobileLeft = await page.evaluate(() => document.querySelector('#phone-number').innerText.split('*')[0])
+        const mobileRight = await page.evaluate(() => document.querySelector('#phone-number').innerText.split('****')[1])
         const mobile = await new Promise((resolve, reject) => {
           request({
-            url: `https://spider.test.baixing.cn/detail/${data.uid}/mobile`,
+            url: `${base.url}/detail/${data.uid}/mobile`,
             method: 'GET',
             strictSSL: false,
             followRedirect: false,
@@ -235,11 +236,12 @@ function createShopDetailTask(shop) {
         }).catch(error => {
           throw new Error(error)
         })
-        // log(`${mobile} VS ${mobileLeft}****${mobileRight}`)
-        // if (!mobile.startsWith(mobileLeft) || !mobile.endsWith(mobileRight)) {
-        //   await sleep(3000 * 30000)
-        // }
-        data.mobile = mobile
+        if (!mobile.startsWith(mobileLeft) || !mobile.endsWith(mobileRight)) {
+          log(`手机号获取错误：${mobile} VS ${mobileLeft}****${mobileRight}`)
+          data.mobile = mobile
+        } else {
+          data.mobile = mobile
+        }
 
         // 热线
         const $hotline = await page.evaluateHandle(() => document.querySelector('.official-nav-phone-block'))
@@ -320,9 +322,9 @@ function createShopDetailTask(shop) {
         /* 短时间内出错次数太多则重启 */
         let score
         if (err.message.match(/WS超时/)) {
-          score = 5
+          score = 20
         } else {
-          score = 1
+          score = 5
         }
         errorAcc(score)
 
