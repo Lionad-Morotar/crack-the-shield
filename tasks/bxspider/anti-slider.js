@@ -39,8 +39,8 @@ module.exports = async function antiSlider(page, config, retry) {
     // 找到要滑到第几个滑块
     // TODO 破解新的滑块
     let num
-    if (config.useLocalSliderNum) {
-      num = 1
+    if (config.sliderNum) {
+      num = config.sliderNum
       log('移动至滑块：' + num)
     } else {
       const ocrRes = await ocr.numbers(sliderImgBase64, 'base64')

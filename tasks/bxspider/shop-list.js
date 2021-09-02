@@ -17,8 +17,9 @@ const config = isProd
     baseurl: `${base.url}`
   } : {
     dbname: 'spider-test',
-    // baseurl: `${base.url}`
+    sliderNum: 2,
     baseurl: 'http://192.168.1.7:9998/spider-list/'
+    // baseurl: `${base.url}`
     // baseurl: 'http://192.168.1.7:9998/spider-detail/'
     // baseurl: 'http://192.168.1.7:9998/spider-slider/'
   }
@@ -162,7 +163,7 @@ function createShopListTask(shoplist) {
                 } else {
                   const data = {
                     _id: shop.id,
-                    idx: ((_id - 1) * 10) + idx + 1,
+                    idx: ((+_id - 1) * 10) + idx + 1,
                     name: shop.name,
                     referer: url,
                     ua: page._ua,
