@@ -122,3 +122,4 @@ mongo/
 cache/
 *.error.txt
 杨韵澍.csv
+utils/count/

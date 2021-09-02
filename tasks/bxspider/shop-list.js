@@ -4,7 +4,7 @@ const connectDB = require('../../src/connect-db')
 const Tasker = require('../../src/tasker')
 const { getInstance, useProxy, useRandomHeaders, useCustomCSS, useRandomUA, utils } = require('../../src/chrome')
 
-const { isProd, autoRun, sleep, dir, log } = require('../../utils')
+const { isProd, autoRun, sleep, dir, log, runCount } = require('../../utils')
 const { findInCollection, dropCollection } = require('../../utils/db')
 const { waitUntil, waitUntilLoaded, waitUntilPropsLoaded } = require('../../utils/dom')
 const preloadFile = fs.readFileSync(dir('src/preload.js'), 'utf8')
@@ -152,6 +152,7 @@ function createShopListTask(shoplist) {
                     name: shop.name,
                     referer: url,
                     ua: page._ua,
+                    version: runCount,
                     done: false
                   }
                   shopCollection.insertOne(data, function (err) {
@@ -182,6 +183,7 @@ function createShopListTask(shoplist) {
               url,
               next: nextPage,
               shops,
+              version: runCount,
               done: true
             }
             shopListCollection.insertOne(data, err => {

@@ -8,7 +8,7 @@ const connectDB = require('../../src/connect-db')
 const Tasker = require('../../src/tasker')
 const { getInstance, useProxy, useRandomHeaders, useCustomCSS, utils } = require('../../src/chrome')
 
-const { isProd, autoRun, dir, sleep, filterSpace, log } = require('../../utils')
+const { isProd, autoRun, dir, sleep, filterSpace, log, runCount } = require('../../utils')
 const { findInCollection } = require('../../utils/db')
 const { waitUntil, waitUntilLoaded, waitUntilPropsLoaded, styles } = require('../../utils/dom')
 const base = require('./config')
@@ -239,6 +239,7 @@ function createShopDetailTask(shop) {
               _id: k,
               ...shop,
               ...data,
+              version: runCount,
               done: true
             }
             shopCollection.insertOne(newData, err => {

@@ -14,6 +14,16 @@ const uuid = () => String(+new Date()) + '-' + String(Math.random()).slice(-6)
 
 const filterSpace = str => str.replace(/\s/g, '')
 
+// 根据脚本的执行次数记录数据库数据版本
+const runCount = (async () => {
+  const env = process.env.NODE_ENV
+  const fp = path.join(__dirname, `./count/${env}.txt`)
+  const lastCount = fs.existsSync(fp) ? (+fs.readFileSync(fp)) : 0
+  const nowCount = lastCount + 1
+  fs.writeFileSync(fp, String(nowCount), 'utf8')
+  return nowCount
+})()
+
 // 创建文件夹
 async function mkdir(dirname, force = false) {
   if (fs.existsSync(dirname)) {
@@ -71,6 +81,7 @@ const autoRun = async (taskFn, opts) => {
 }
 
 module.exports = {
+  runCount,
   dir,
   log,
   isProd,
