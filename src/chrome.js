@@ -30,51 +30,8 @@ const verifySlideMainCSS = fs.readFileSync(dir('statics/verifySlide.main.css'))
 const verifySlideMainJS = fs.readFileSync(dir('statics/verifySlide.main.js'))
 
 // TODO max instance num
-let BROWSER_POOL = []
-const MINARGS = [
-  '--autoplay-policy=user-gesture-required',
-  '--disable-background-networking',
-  '--disable-background-timer-throttling',
-  '--disable-backgrounding-occluded-windows',
-  '--disable-breakpad',
-  '--disable-client-side-phishing-detection',
-  '--disable-component-update',
-  '--disable-default-apps',
-  '--disable-dev-shm-usage',
-  '--disable-domain-reliability',
-  '--disable-extensions',
-  '--disable-features=AudioServiceOutOfProcess',
-  '--disable-hang-monitor',
-  '--disable-ipc-flooding-protection',
-  '--disable-notifications',
-  '--disable-offer-store-unmasked-wallet-cards',
-  '--disable-popup-blocking',
-  '--disable-print-preview',
-  '--disable-prompt-on-repost',
-  '--disable-renderer-backgrounding',
-  '--disable-setuid-sandbox',
-  '--disable-speech-api',
-  '--disable-sync',
-  '--hide-scrollbars',
-  '--ignore-gpu-blacklist',
-  '--metrics-recording-only',
-  '--mute-audio',
-  '--no-default-browser-check',
-  '--no-first-run',
-  '--no-pings',
-  '--no-sandbox',
-  '--no-zygote',
-  '--password-store=basic',
-  '--use-gl=swiftshader',
-  '--use-mock-keychain',
-  /**
-   * remove cors
-   * @see https://github.com/puppeteer/puppeteer/issues/4889
-   **/
-  '--disable-features=OutOfBlinkCors',
-  '--disable-web-security',
-  /* remove cors end */
-]
+const BROWSER_POOL = []
+const MINARGS = require('./chrome-args.js')
 
 // 创建实例以供之后使用
 const createInstance = async (conf) => {
@@ -84,8 +41,10 @@ const createInstance = async (conf) => {
   const antiCanvasFPExtPath = path.join(__dirname, '../extension/anti-canvas-fp')
   try {
     browser = await puppeteer.launch({
+      // headless: true,
       headless: isProd,
       ignoreHTTPSErrors: true,
+      // devtools: false,
       devtools: !isProd,
       // executablePath: 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
       args: [
@@ -100,13 +59,17 @@ const createInstance = async (conf) => {
     debugPort = await browser.wsEndpoint()
     const instance = {
       id: String(+new Date()) + '-' + String(Math.random()).slice(-6),
+      status: '',
       tabs: 0,
+      useTimes: 0,
       port: debugPort,
       isBusy () {
         // console.log(`${this.id} tabs num: ${this.tabs}`)
-        return maxTabs
-          ? this.tabs >= maxTabs
-          : false
+        return this.status === 'reopen'
+          ? true
+          : maxTabs
+            ? this.tabs >= maxTabs
+            : false
       }
     }
     BROWSER_POOL.push(instance)
@@ -118,13 +81,12 @@ const createInstance = async (conf) => {
 }
 
 // 优先从实例池中获取浏览器
-const getInstance = async (conf) => {
-  const { maxTabs = 3 } = Object.assign(conf || {})
+async function getInstance (conf) {
+  const { maxTabs = 3, useNew = false } = Object.assign(conf || {})
   let instance = null
   let chrome = null
   try {
-    BROWSER_POOL = _.shuffle(BROWSER_POOL)
-    const noBusyInstance = BROWSER_POOL.find(x => {
+    const noBusyInstance = _.shuffle(BROWSER_POOL).find(x => {
       return x.isBusy && !x.isBusy()
     })
     if (noBusyInstance) {
@@ -134,7 +96,6 @@ const getInstance = async (conf) => {
         browserWSEndpoint: noBusyInstance.port
       })
     } else {
-      await new Promise(resolve => setTimeout(resolve, Math.random() * 300))
       instance = await createInstance({ maxTabs })
       chrome = await puppeteer.connect({
         browserWSEndpoint: instance.port
@@ -145,11 +106,13 @@ const getInstance = async (conf) => {
     const _newPage = chrome.newPage
     chrome.newPage = async (...args) => {
       const page = await _newPage.bind(chrome)(...args)
+      page._instance = instance
       instance.tabs += 1
       const _close = page.close
       page.close = async (...args) => {
         _close.bind(page)(...args)
         instance.tabs -= 1
+        instance.useTimes += 1
       }
       page._timeRatio = 1
       return page
@@ -161,6 +124,16 @@ const getInstance = async (conf) => {
 
   return chrome
 }
+
+// 默认打开一些实例
+const defaultInstanceCount = 5
+!(async () => {
+  await Promise.all(
+    Array(defaultInstanceCount)
+      .fill('')
+      .map(async x => await getInstance())
+  )
+})()
 
 // 退出命令行时关闭浏览器（防止内存泄漏）
 process.on('SIGINT', async function () {

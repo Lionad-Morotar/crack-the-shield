@@ -244,8 +244,12 @@ function createShopListTask(shoplist) {
         )
         log.error(err.message)
         this.addTask(createShopListTask(shoplist))
-        page && page.close && (await page.close())
+        page && (await page.close())
         errorAcc(1)
+
+      } finally {
+        
+        // await chrome.disconnect()
 
       }
     }
@@ -271,7 +275,7 @@ connectDB().then(async mongo => {
     log(`START FROM SHOP NO.${todos[0].id}`)
   
     const taskConf = {
-      maxConcurrenceCount: 1,
+      maxConcurrenceCount: 5,
       interval: () => Math.random() * 500 + 100,
     }
     await new Tasker(taskConf)

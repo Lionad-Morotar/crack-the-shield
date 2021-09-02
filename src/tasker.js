@@ -51,10 +51,11 @@ module.exports = class Tasker {
    */
   calcRestConcurrenceCount() {
     const doingEmpty = this.maxConcurrenceCount - this.doing.length
-    return Math.min(
+    const restCons = Math.min(
       doingEmpty <= 0 ? 0 : doingEmpty,
       this.todos.length
     )
+    return restCons
   }
 
   /**

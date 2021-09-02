@@ -36,8 +36,7 @@ const errorAcc = score => {
 const errorDec = score => (errorAccumulated -= score)
 
 // 初始化浏览器
-const getPage = async () => {
-  const chrome = await getInstance()
+const getPage = async chrome => {
   const page = await chrome.newPage()
   await page.setDefaultNavigationTimeout(7 * 1000)
   await page.evaluateOnNewDocument(preloadFile)
@@ -88,9 +87,11 @@ function createShopDetailTask(shop) {
     id: k,
     async run({ artifact }) {
       const startTime = +new Date()
+      let chrome
       let page
       try {
-        page = artifact || (await getPage())
+        chrome = await getInstance()
+        page = artifact || (await getPage(chrome))
         await useUA(page, shop.ua)
         const isPageUsed = page === artifact
         const data = { uid: '', name: '', hotline: '', mobile: '', owner: '', address: '' }
@@ -283,7 +284,7 @@ function createShopDetailTask(shop) {
         )
         log.error(err.message)
         this.addTask(createShopDetailTask(shop))
-        page && page.close && (await page.close())
+        page && (await page.close())
         let errScore
         if (err.message.match(/WS超时/)) {
           errScore = 20
@@ -291,6 +292,10 @@ function createShopDetailTask(shop) {
           errScore = 5
         }
         errorAcc(errScore)
+
+      } finally {
+
+        // await chrome.disconnect()
 
       }
     }
@@ -312,7 +317,7 @@ connectDB().then(async mongo => {
     log(`剩余${todos.length}个详情页任务`)
 
     const taskConf = {
-      maxConcurrenceCount: 1,
+      maxConcurrenceCount: 5,
       interval: () => Math.random() * 500 + 100,
     }
     return await new Tasker(taskConf)
