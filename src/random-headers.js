@@ -241,12 +241,12 @@ const getOneName = (withX = false) => {
 
 const getRandomHeaders = () => {
   const num = Math.floor(Math.random() * 10) + 1
-  const headers = Array(num).fill('')
+  return Array(num)
+    .fill('')
     .reduce((h, c) => {
       h[getOneName(true)] = getOneName()
       return h
     }, {})
-  return headers
 }
 
 module.exports = {

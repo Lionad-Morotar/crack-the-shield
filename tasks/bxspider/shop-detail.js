@@ -271,9 +271,12 @@ function createShopDetailTask(shop) {
 
       } catch (err) {
 
+        !isProd && (
+          console.error(err),
+          await sleep(1000 * 1000)
+        )
         log.error(err.message)
         this.addTask(createShopDetailTask(shop))
-        !isProd && await sleep(1000 * 1000)
         page && page.close && (await page.close())
         let errScore
         if (err.message.match(/WS超时/)) {

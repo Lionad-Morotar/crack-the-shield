@@ -188,12 +188,14 @@ process.on('SIGINT', async function () {
 const seeds = {}
 const useRandomHeaders = async (page, baseHeaders, seed) => {
   let headers
-  if (seed) {
+  if (seed && seeds[seed]) {
     headers = Object.assign(seeds[seed], baseHeaders)
   } else {
     const randomHeaders = getRandomHeaders()
     headers = Object.assign(randomHeaders, baseHeaders)
-    page._randomHeaderSeed = String(+new Date()) + '-' + String(Math.random()).slice(-6)
+    const seedKey = String(+new Date()) + '-' + String(Math.random()).slice(-6)
+    seeds[seedKey] = headers
+    page._randomHeaderSeed = seedKey
   }
   await page.setExtraHTTPHeaders(headers)
   return page

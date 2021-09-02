@@ -234,9 +234,12 @@ function createShopListTask(shoplist) {
 
       } catch (err) {
 
+        !isProd && (
+          console.error(err),
+          await sleep(1000 * 1000)
+        )
         log.error(err.message)
         this.addTask(createShopListTask(shoplist))
-        !isProd && await sleep(1000 * 1000)
         page && page.close && (await page.close())
         errorAcc(1)
 
