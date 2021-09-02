@@ -1,58 +1,82 @@
-const _ = require('lodash')
-const UserAgent = require("user-agents")
+const fs = require('fs')
 
 const connectDB = require('../../src/connect-db')
 const Crawler = require('../../src/crawler')
-const { getInstance, useProxy, useRandomHeaders, utils } = require('../../src/chrome')
+const { getInstance, useProxy, useRandomHeaders, useCustomCSS, useRandomUA, utils } = require('../../src/chrome')
 
-const { autoRun, sleep, log } = require('../../utils')
-const { findInCollection } = require('../../utils/db')
+const { isProd, autoRun, sleep, dir, log } = require('../../utils')
+const { findInCollection, dropCollection } = require('../../utils/db')
 const { waitUntil, waitUntilLoaded, waitUntilPropsLoaded } = require('../../utils/dom')
-
+const preloadFile = fs.readFileSync(dir('src/preload.js'), 'utf8')
 const base = require('./config')
-const pageMap = require('./page.json')
 const antiSlider = require('./anti-slider.js')
 
-const isProd = process.env.NODE_ENV === 'production'
-const config = isProd
+const config = isProd()
   ? {
     dbname: 'spider',
-    baseurl: `${base.url}/`
+    baseurl: `${base.url}`
   } : {
     dbname: 'spider-test',
-    // baseurl: 'http://192.168.1.7:8080/spider-main/'
-    // baseurl: 'http://192.168.1.7:8080/spider-slider'
+    // baseurl: `${base.url}`
+    baseurl: 'http://192.168.1.7:9998/spider-list/'
+    // baseurl: 'http://192.168.1.7:9998/spider-detail/'
+    // baseurl: 'http://192.168.1.7:9998/spider-slider/'
   }
+
+let errorAccumulated = 0
+const errorAcc = score => {
+  errorAccumulated += score
+  if (errorAccumulated > 50) {
+    process.exit()
+  }
+}
+const errorDec = score => (errorAccumulated -= score)
 
 // 初始化浏览器
 const getPage = async () => {
   const chrome = await getInstance()
   const page = await chrome.newPage()
   await useRandomHeaders(page, {
-    spider: 'yiguang',
+    'spider': 'yiguang',
     'Accept-Language': 'zh-CN,zh;q=0.9,en-US;q=0.8,en;'
   })
-  await page.setDefaultNavigationTimeout(8 * 1000)
+  await page.setDefaultNavigationTimeout(7 * 1000)
+  await page.evaluateOnNewDocument(preloadFile)
   await page.evaluateOnNewDocument(waitUntil)
   await page.evaluateOnNewDocument(waitUntilLoaded)
   await page.evaluateOnNewDocument(waitUntilPropsLoaded)
   await page.setViewport(utils.setViewport())
   await page.setRequestInterception(true)
-  const userAgent = new UserAgent({
-    deviceCategory: "desktop",
-    platform: "Win32",
-  })
-  await page.setUserAgent(userAgent.toString())
+  await useRandomUA(page)
   // 屏蔽一些不必要的请求
   await useProxy(page, req => {
     const url = req.url()
+    // 伪造指纹
+    if (url.match(/s.png\?cf=0/)) {
+      const fingerMatch = url.match(/&f=([a-zA-Z0-9]*)/)
+      if (fingerMatch) {
+        fingerprint = fingerMatch[1]
+      }
+    } else if (url.match(/s.png\?cf=1/) && !url.match(/T=T/)) {
+      // mark &T=T do not redirect again
+      const fakeURL = url.replace(/&f=[a-zA-Z0-9]*/, '&T=T&f=' + fingerprint)
+      req.respond({
+        status: 301,
+        headers: {
+          location: fakeURL
+        }
+      })
+      return false
+    }
+    // 屏蔽一些不必要的请求
     if (
       url.match(/logo_baixing.png/) ||
       url.match(/title.png/) ||
       url.match(/index.css/) ||
       url.match(/bfjs/) ||
       url.match(/jquery.min.js/) ||
-      url.match(/script.js/)
+      url.match(/script.js/) ||
+      url.match(/s.png/)
     ) {
       req.abort()
       return false
@@ -60,35 +84,24 @@ const getPage = async () => {
       return true
     }
   })
-  await page.evaluateOnNewDocument(async () => {
-    document.addEventListener('DOMContentLoaded', () => {
-      const $style = document.createElement('style')
-      $style.innerHTML = `
-          .refresh-icon { display: none }
-          .verify-img-panel { border-radius: 0 }
-        `
-      document.querySelector('head').appendChild($style)
-    })
-  })
+  await useCustomCSS(page, `
+    .refresh-icon { display: none }
+    .verify-img-panel { border-radius: 0 }
+  `)
   return page
 }
 
 // 创建店铺列表页任务
 let shopCollection = null
-const shopListPageTasks = _.shuffle(
-  Object.entries(pageMap).map(([k, v]) => {
-    return getShopListTask(k, v)
-  })
-)
-function getShopListTask(k, v) {
+function createShopListTask(shoplist) {
+  const { _id, url } = shoplist
   return {
-    id: k,
+    id: _id,
     async run({ collection, artifact }) {
       const page = artifact || (await getPage())
       const isPageUsed = page === artifact
       try {
-        const url = `${config.baseurl}?p=${v}`
-        !isPageUsed && (await sleep(1000))
+        isProd() || !isPageUsed && (await sleep(1000))
         await page.goto(url, { waitUntil: 'domcontentloaded' })
         await page.bringToFront()
 
@@ -101,6 +114,14 @@ function getShopListTask(k, v) {
           page._noUseMore = false
         }
 
+        // 等待列表加载完毕
+        await page.evaluate(async () => {
+          await waitUntil(() => {
+            const $elm = document.querySelectorAll('.exhibition')
+            return $elm.length === 10
+          }, 10 * 1000)
+        })
+
         // 获取店铺 URL 和名称信息
         const shops = await page.evaluate(() => {
           const $shops = [...document.querySelectorAll('.exhibition')]
@@ -111,60 +132,110 @@ function getShopListTask(k, v) {
               const name = $shop.querySelector('.company-name').innerText.replace(/\s/g, '')
               return { id, name }
             } else {
-              throw new Error('no id matched')
+              log.error('没有匹配到列表中某个店铺的数据')
+              return { id: '-', name: '-' }
             }
           })
         })
-        if (shops.length === 0) {
-          throw new Error('list not found')
-        }
+
+        // 找到下一页
+        const nextParams = await page.evaluate(() => {
+          const $next = document.querySelector('.go-page.next')
+          return $next && $next.getAttribute('href')
+        })
+        const nextPage = nextParams
+          ? config.baseurl + nextParams
+          : null
 
         // 储存店铺数据
         await Promise.all(
-          shops.map(shop => new Promise((resolve, reject) => {
-            shopCollection.deleteMany({ _id: shop.id }, function (err) {
+          shops.map((shop, idx) => new Promise((resolve, reject) => {
+            shopCollection.find({ _id: shop.id }).toArray(function (err, res) {
               if (err) {
-                console.log('保存前删除店铺数据错误')
-                reject(err)
-              }
-              const data = {
-                _id: shop.id,
-                name: shop.name,
-                referrer: url
-              }
-              shopCollection.insertOne(data, function (err) {
-                if (err) {
-                  console.log('储存店铺数据错误')
-                  reject(err)
-                } else {
-                  resolve()
-                }
-              })
-            })
-          }))
-        )
-
-        // 储存列表页面数据
-        const data = { _id: k, url, store: shops }
-        await new Promise((resolve, reject) => {
-          collection.deleteMany({ _id: k }, function (err) {
-            if (err) {
-              console.log('保存前删除列表页面数据错误')
-              reject(err)
-            }
-            collection.insertOne(data, function (err) {
-              if (err) {
-                console.log('储存列表页数据错误')
+                log.error('保存前校验店铺数据错误')
                 reject(err)
               } else {
-                resolve()
+                if (res.length > 0) {
+                  if (isProd()) {
+                    log('重复的！不用保存了！可恶哇！')
+                  }
+                } else {
+                  const data = {
+                    _id: shop.id,
+                    idx: ((_id - 1) * 10) + idx + 1,
+                    name: shop.name,
+                    referer: url,
+                    ua: page._ua,
+                    done: false
+                  }
+                  shopCollection.insertOne(data, function (err) {
+                    if (err) {
+                      log.error('储存店铺数据错误')
+                      reject(err)
+                    } else {
+                      resolve()
+                    }
+                  })
+                }
+              }
+            })
+          }))
+        ).catch(error => {
+          throw new Error(error)
+        })
+
+        // 储存列表页面数据
+        await new Promise((resolve, reject) => {
+          collection.deleteMany({ _id }, err => {
+            if (err) {
+              log('保存前删除列表页面数据错误')
+              reject(err)
+            }
+            const data = {
+              _id,
+              url,
+              next: nextPage,
+              shops,
+              done: true
+            }
+            collection.insertOne(data, err => {
+              if (err) {
+                log('储存列表页数据错误')
+                reject(err)
+              } else {
+                if (nextPage) {
+                  collection.deleteMany({ _id: _id + 1 }, err => {
+                    if (err) {
+                      log('保存前删除列表页面数据错误')
+                      reject(err)
+                    }
+                    const nextTask = {
+                      _id: _id + 1,
+                      url: nextPage,
+                      done: false
+                    }
+                    collection.insertOne(nextTask, err => {
+                      if (err) {
+                        log('储存列表页数据错误')
+                        reject(err)
+                      }
+                      this.addTask(createShopListTask(nextTask))
+                      resolve()
+                    })
+                  })
+                }
               }
             })
           })
+        }).catch(error => {
+          throw new Error(error)
         })
 
-        log(`DONE：${url} ${shops.length}`)
+        log(`DONE：${url}`)
 
+        errorDec(Math.floor(errorAccumulated / 2))
+        await page.deleteCookie({ name: 'bxf' })
+        await page.evaluate(() => localStorage.clear())
         await page.close()
         // page._useTime = (page._useTime || 0) + 1
         // const useMore = !page._noUseMore && (page._useTime < 20)
@@ -174,14 +245,20 @@ function getShopListTask(k, v) {
 
       } catch (err) {
 
-        console.log(err)
         log.error(err.message)
-        this.addTask(getShopListTask(k, v))
+        this.addTask(createShopListTask(shoplist))
         // await sleep(1000 * 1000)
-        await page.close()
+        page && page.close && (await page.close())
 
-      } finally {
-        // await chrome.close()
+        /* 短时间内出错次数太多则重启 */
+        let score
+        if (err.message.match(/WS超时/)) {
+          score = 20
+        } else {
+          score = 5
+        }
+        errorAcc(score)
+
       }
     }
   }
@@ -191,15 +268,22 @@ function getShopListTask(k, v) {
 connectDB().then(async mongo => {
   const db = mongo.db(config.dbname)
   shopCollection = db.collection('shops')
-  const listCollection = db.collection('shop-list')
+  const shopListCollection = db.collection('shop-list')
+
+  if (!isProd()) {
+    await dropCollection(shopListCollection)
+    await dropCollection(shopCollection)
+  }
 
   const runShopListTasks = async () => {
-    const allLists = await findInCollection(listCollection)
-    const todos = shopListPageTasks.filter(x => !allLists.find(y => y._id === x.id))
-    log(`剩余${todos.length}个列表页任务`)
+    let nextTask = 
+      (await findInCollection(shopListCollection, { done: false }))[0] ||
+      ({ _id: 1, url: config.baseurl, done: false })
+    const todos = [nextTask].map(x => createShopListTask(x))
+    log(`START FROM SHOP NO.${todos[0].id}`)
   
     await new Crawler({
-      collection: listCollection,
+      collection: shopListCollection,
       maxConcurrenceCount: 1,
       interval: Math.random() * 500 + 100,
     })

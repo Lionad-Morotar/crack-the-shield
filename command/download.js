@@ -35,7 +35,7 @@ async function main (task) {
       directory: saveToDir,
       request: {
         headers: {
-          spider: 'yiguang'
+          'spider': 'yiguang'
         }
       }
     })

@@ -1,33 +1,27 @@
 const fs = require('fs')
-const path = require('path')
 
 const request = require('request')
 const io = require('socket.io-client')
-const UserAgent = require("user-agents")
 
 const ocr = require('../../plugins/ocr')
 const connectDB = require('../../src/connect-db')
 const Crawler = require('../../src/crawler')
-const { getInstance, useProxy, useRandomHeaders, utils } = require('../../src/chrome')
+const { getInstance, useProxy, useRandomHeaders, useCustomCSS, utils } = require('../../src/chrome')
 
-const { autoRun, dir, sleep, filterSpace, log } = require('../../utils')
+const { isProd, autoRun, dir, sleep, filterSpace, log } = require('../../utils')
 const { findInCollection } = require('../../utils/db')
 const { waitUntil, waitUntilLoaded, waitUntilPropsLoaded, styles } = require('../../utils/dom')
 const base = require('./config')
-
 const preloadFile = fs.readFileSync(dir('src/preload.js'), 'utf8')
 
 const antiSlider = require('./anti-slider.js')
 
-console.log('NODE_ENV:', process.env.NODE_ENV)
-
-const isProd = process.env.NODE_ENV === 'production'
-const config = isProd
+const config = isProd()
   ? {
     dbname: 'spider',
     baseurl: `${base.url}/detail/`
   } : {
-    dbname: 'spider',
+    dbname: 'spider-test',
     baseurl: `${base.url}/detail/`
   }
 
@@ -51,13 +45,7 @@ const getPage = async () => {
   await page.evaluateOnNewDocument(waitUntilPropsLoaded)
   await page.evaluateOnNewDocument(styles)
   await page.setViewport(utils.setViewport())
-  const userAgent = new UserAgent({
-    deviceCategory: "desktop",
-    platform: "Win32",
-  })
-  const userAgentStr = userAgent.toString()
-  page._ua = userAgentStr
-  await page.setUserAgent(userAgentStr)
+  await useRandomUA(page)
   let fingerprint
   await page.setRequestInterception(true)
   await useProxy(page, req => {
@@ -79,13 +67,9 @@ const getPage = async () => {
       })
       return false
     }
-    // 不加载广告图片，提高速度
-    if (url.match(/pexels-photo/)) {
-      req.abort()
-      return false
-    }
-    // 不加载某些外部脚本
+    // 屏蔽一些不必要的请求
     else if (
+      url.match(/pexels-photo/) ||
       url.match(/bfjs/) ||
       url.match(/socket.io.min.js/) ||
       url.match(/script.js/) ||
@@ -97,32 +81,27 @@ const getPage = async () => {
       return true
     }
   })
-  await page.evaluateOnNewDocument(async () => {
-    document.addEventListener('DOMContentLoaded', () => {
-      // 自定义样式
-      const $style = document.createElement('style')
-      $style.innerHTML = `
-          .ad-list { display: none }
-          .official-nav-phone-block {
-            padding: 20px;
-            background: #ff4466;
-          }
-          #addressText {
-            padding: 20px;
-            font-weight: normal;
-            letter-spacing: 1px;
-          }
-        `
-      document.querySelector('head').appendChild($style)
-    })
-  })
+  await useCustomCSS(page, `
+    .refresh-icon { display: none }
+    .verify-img-panel { border-radius: 0 }
+    .ad-list { display: none }
+    .official-nav-phone-block {
+      padding: 20px;
+      background: #ff4466;
+    }
+    #addressText {
+      padding: 20px;
+      font-weight: normal;
+      letter-spacing: 1px;
+    }
+  `)
   return page
 }
 
 // 创建店铺列表页任务
 let shopCollection = null
 function createShopDetailTask(shop) {
-  const { _id: k } = shop
+  const { _id: k, idx } = shop
   return {
     id: k,
     async run({ collection, artifact }) {
@@ -133,9 +112,9 @@ function createShopDetailTask(shop) {
         const data = { uid: '', name: '', hotline: '', mobile: '', owner: '', address: '' }
 
         const url = `${config.baseurl}${k}`
-        !isPageUsed && (await sleep(1000))
+        isProd() || !isPageUsed && (await sleep(1000))
         await useRandomHeaders(page, {
-          spider: 'yiguang',
+          'spider': 'yiguang',
           referer: `${base.url}/`,
           'Accept-Language': 'zh-CN,zh;q=0.9,en-US;q=0.8,en;'
         })
@@ -174,7 +153,7 @@ function createShopDetailTask(shop) {
             timeout: 10000,
             transports: ['websocket'],
             extraHeaders: {
-              spider: 'yiguang'
+              'spider': 'yiguang'
             }
           }
           const ws = io(base.wss, options)
@@ -203,12 +182,12 @@ function createShopDetailTask(shop) {
             strictSSL: false,
             followRedirect: false,
             headers: {
-              spider: 'yiguang',
+              'spider': 'yiguang',
               cookie: 'bxf=11111111122222222133333333144444444'
             }
           }, (err, response) => {
             if (err) {
-              console.log('获取手机号出错')
+              log.error('获取手机号出错')
               reject(err)
             } else {
               const decodeMobile = (base64) => {
@@ -262,16 +241,16 @@ function createShopDetailTask(shop) {
           data.address = filterSpace(ocrRes.words_result[0].words)
           data.hotline = filterSpace(ocrRes.words_result[1].words)
         } catch (ocrError) {
-          console.error('ocrError:', ocrError)
+          log.error('ocrError:', ocrError)
           data.address = data.address || '-'
           data.hotline = data.hotline || '-'
         }
 
         // 储存店铺数据
         await new Promise((resolve, reject) => {
-          shopCollection.deleteMany({ _id: k }, function (err) {
+          shopCollection.deleteMany({ _id: k }, err => {
             if (err) {
-              console.log('保存前删除店铺数据错误')
+              log.error('保存前删除店铺数据错误')
               reject(err)
             }
             const newData = {
@@ -280,9 +259,9 @@ function createShopDetailTask(shop) {
               ...data,
               done: true
             }
-            shopCollection.insertOne(newData, function (err) {
+            shopCollection.insertOne(newData, err => {
               if (err) {
-                console.log('保存店铺数据错误')
+                log.error('保存店铺数据错误')
                 reject(err)
               } else {
                 resolve()
@@ -293,10 +272,12 @@ function createShopDetailTask(shop) {
           throw new Error(error)
         })
 
-        log(`DONE：${page._USE_PROXY} ${JSON.stringify(data)} ${k}`)
+        log(`DONE：NO.${idx} ${page._proxyType} ${JSON.stringify(data)} ${k}`)
 
         // await sleep(1000 * 1000)
         errorDec(Math.floor(errorAccumulated / 2))
+        await page.deleteCookie({ name: 'bxf' })
+        await page.evaluate(() => localStorage.clear())
         await page.close()
         // page._useTime = (page._useTime || 0) + 1
         // const useMore = !page._noUseMore && (page._useTime < 20)
@@ -306,13 +287,10 @@ function createShopDetailTask(shop) {
 
       } catch (err) {
 
-        console.log(err.message)
         log.error(err.message)
         this.addTask(createShopDetailTask(shop))
         // await sleep(1000 * 1000)
-        if (page && page.close) {
-          await page.close()
-        }
+        page && page.close && (await page.close())
 
         /* 短时间内出错次数太多则重启 */
         let score
@@ -323,8 +301,6 @@ function createShopDetailTask(shop) {
         }
         errorAcc(score)
 
-      } finally {
-        // await browser.close()
       }
     }
   }

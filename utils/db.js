@@ -27,7 +27,20 @@ const findInCollection = async (collection, condition = {}) => {
   })
 }
 
+const dropCollection = async (collection, condition = {}) => {
+  return new Promise((resolve, reject) => {
+    collection.deleteMany(condition, function (err) {
+      if (err) {
+        reject(err)
+      } else {
+        resolve()
+      }
+    })
+  })
+}
+
 module.exports = {
   asyncify,
-  findInCollection
+  findInCollection,
+  dropCollection
 }

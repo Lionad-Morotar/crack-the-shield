@@ -10,7 +10,7 @@ new Promise(resolve => {
     transports: ['websocket'],
     extraHeaders: {
       Cookie: cookie,
-      spider: 'yiguang'
+      'spider': 'yiguang'
     }
   }
   const ws = io(base.wss, options)

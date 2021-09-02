@@ -1,5 +1,6 @@
 const fs = require('fs')
 const path = require('path')
+const UserAgent = require("user-agents")
 
 const _ = require('lodash')
 const request = require('request')
@@ -7,17 +8,15 @@ const puppeteer = require('puppeteer-extra')
 const StealthPlugin = require('puppeteer-extra-plugin-stealth')
 // const UAPlugin = require('puppeteer-extra-plugin-anonymize-ua')
 
-const { log, dir } = require('../utils')
+const { isProd, log, dir } = require('../utils')
 const { getProxy } = require('./private/dailiyun')
 const { proxyURL, getAuthorization } = require('./private/xdaili')
 const { getRandomHeaders } = require('./random-headers')
 
-const isProd = process.env.NODE_ENV === 'production'
-
 // const USE_PROXY = ''
 const PROXE_TYPES_RATIO = {
-  'XDAILI': 5,
-  'DAILIYUN': 5
+  'XDAILI': 0,
+  'DAILIYUN': 0
 }
 const PROXE_TYPES = Object.entries(PROXE_TYPES_RATIO).reduce((h, [k, v]) => {
   h = h.concat(...Array(v).fill(k))
@@ -78,16 +77,16 @@ const MINARGS = [
 ]
 
 // 创建实例以供之后使用
-const createInstance = async ({ maxTabs }) => {
+const createInstance = async (conf) => {
+  const { maxTabs = 3 } = Object.assign(conf || {})
   let browser
   // 混淆指纹插件
   const antiCanvasFPExtPath = path.join(__dirname, '../extension/anti-canvas-fp')
   try {
     browser = await puppeteer.launch({
-      headless: true,
-      // headless: false,
+      headless: isProd(),
       ignoreHTTPSErrors: true,
-      devtools: !isProd,
+      devtools: !isProd(),
       // executablePath: 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
       args: [
         ...MINARGS,
@@ -119,7 +118,8 @@ const createInstance = async ({ maxTabs }) => {
 }
 
 // 优先从实例池中获取浏览器
-const getInstance = async ({ maxTabs = 3 }) => {
+const getInstance = async (conf) => {
+  const { maxTabs = 3 } = Object.assign(conf || {})
   let instance = null
   let chrome = null
   try {
@@ -199,6 +199,31 @@ const useRandomHeaders = async (page, baseHeaders, seed) => {
   return page
 }
 
+// 使用自定义 CSS
+const useCustomCSS = async (page, cssContent) => {
+  await page.evaluateOnNewDocument(async () => {
+    document.addEventListener('DOMContentLoaded', () => {
+      const $style = document.createElement('style')
+      $style.innerHTML = cssContent
+      document.querySelector('head').appendChild($style)
+    })
+  })
+  return page
+}
+
+// 使用随机 UA
+const useRandomUA = async (page, conf) => {
+  const config = Object.assign({
+    deviceCategory: "desktop",
+    platform: "Win32",
+  }, conf || {})
+  const userAgent = new UserAgent(config)
+  const userAgentStr = userAgent.toString()
+  await page.setUserAgent(userAgentStr)
+  page._ua = userAgentStr
+  return page
+}
+
 /**
  * 使用代理
  * 使用时需要注意 page.on('request') 的顺序
@@ -206,8 +231,8 @@ const useRandomHeaders = async (page, baseHeaders, seed) => {
 const useProxy = async (page, proxyReq) => {
   await page.setRequestInterception(true)
   const USE_PROXY = _.shuffle(PROXE_TYPES)[0]
-  page._USE_PROXY = USE_PROXY
-  const proxy = USE_PROXY === ''
+  page._proxyType = USE_PROXY
+  const proxy = !USE_PROXY
     ? ''
     : USE_PROXY === 'DAILIYUN'
       ? await getProxy()
@@ -216,7 +241,7 @@ const useProxy = async (page, proxyReq) => {
     log('[INFO] 代理：' + proxy)
   }
   await page.on('request', async req => {
-    if (!proxy) {
+    if (!proxy && isProd()) {
       throw new Error(`[ERR] 代理获取错误`)
     }
     try {
@@ -265,7 +290,7 @@ const useProxy = async (page, proxyReq) => {
             method: req.method(),
             strictSSL: false,
             followRedirect: false,
-            headers: USE_PROXY === 'DAILIYUN'
+            headers: (!USE_PROXY || USE_PROXY === 'DAILIYUN')
               ? req.headers()
               : {
                 ...req.headers(),
@@ -320,6 +345,8 @@ module.exports = {
   getInstance,
   useProxy,
   useRandomHeaders,
+  useCustomCSS,
+  useRandomUA,
   /**
    * 帮助函数
    **/

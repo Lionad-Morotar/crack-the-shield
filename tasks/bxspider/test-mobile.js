@@ -7,7 +7,7 @@ request({
   strictSSL: false,
   followRedirect: false,
   headers: {
-    spider: 'yiguang',
+    'spider': 'yiguang',
     cookie: 'bxf=11111111122222222133333333144444444'
   }
 }, (err, response) => {

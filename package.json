@@ -6,15 +6,15 @@
   "scripts": {
     "download": "node ./command/download.js",
     "open": "node ./command/open.js",
-    "dist": "http-server -c0 ./dist",
+    "dist": "http-server -c0 -p9998 ./dist",
     "kill": "taskkill /f /im chrome.exe",
-    "statics": "http-server ./statics -p9999",
+    "statics": "http-server -p9999 ./statics",
     "db": "mongod --dbpath D:\\@Github\\crack-the-shield\\mongo",
     "result": "node ./tasks/bxspider/get-result.js",
-    "spider-shoplist:test": "cross-env NODE_ENV=test node ./tasks/bxspider/index.js",
-    "spider-shoplist:prod": "cross-env NODE_ENV=production node ./tasks/bxspider/index.js",
-    "spider-detail:test": "cross-env NODE_ENV=test pm2 start ./tasks/bxspider/shop-detail.js",
-    "spider-detail:prod": "cross-env NODE_ENV=production pm2 start ./tasks/bxspider/shop-detail.js"
+    "shoplist:test": "cross-env NODE_ENV=test node ./tasks/bxspider/shop-list.js",
+    "shoplist:prod": "cross-env NODE_ENV=production pm2 start ./tasks/bxspider/shop-list.js",
+    "detail:test": "cross-env NODE_ENV=test node ./tasks/bxspider/shop-detail.js",
+    "detail:prod": "cross-env NODE_ENV=production pm2 start ./tasks/bxspider/shop-detail.js"
   },
   "author": "Lionad",
   "license": "ISC",
