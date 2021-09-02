@@ -4,7 +4,7 @@ const connectDB = require('../../src/connect-db')
 const Tasker = require('../../src/tasker')
 const { getInstance, useProxy, useRandomHeaders, useCustomCSS, useRandomUA, utils } = require('../../src/chrome')
 
-const { isProd, autoRun, sleep, dir, log, runCount } = require('../../utils')
+const { isProd, autoRun, sleep, uuid, dir, log, runCount } = require('../../utils')
 const { findInCollection, dropCollection } = require('../../utils/db')
 const { waitUntil, waitUntilLoaded, waitUntilPropsLoaded } = require('../../utils/dom')
 const preloadFile = fs.readFileSync(dir('src/preload.js'), 'utf8')
@@ -83,10 +83,10 @@ function createShopListTask(shoplist) {
   return {
     id: _id,
     async run({ artifact }) {
+      const startTime = +new Date()
       const page = artifact || (await getPage())
       const isPageUsed = page === artifact
       try {
-        isProd || !isPageUsed && (await sleep(1000))
         await page.goto(url, { waitUntil: 'domcontentloaded' })
         await page.bringToFront()
 
@@ -135,7 +135,10 @@ function createShopListTask(shoplist) {
         // 储存店铺数据
         await Promise.all(
           shops.map((shop, idx) => new Promise((resolve, reject) => {
-            shopCollection.find({ _id: shop.id }).toArray((err, res) => {
+            const shopID = isProd
+              ? shop.id
+              : uuid()
+            shopCollection.find({ _id: shopID }).toArray((err, res) => {
               if (err) {
                 log.error('保存前校验店铺数据错误')
                 reject(err)
@@ -147,7 +150,7 @@ function createShopListTask(shoplist) {
                   resolve()
                 } else {
                   const data = {
-                    _id: shop.id,
+                    _id: shopID,
                     idx: ((+_id - 1) * 10) + idx + 1,
                     name: shop.name,
                     referer: url,
@@ -219,7 +222,8 @@ function createShopListTask(shoplist) {
           throw new Error(error)
         })
 
-        log(`DONE：NO.${_id} ${url}`)
+        const endTime = +new Date()
+        log(`DONE in ${endTime - startTime}ms：NO.${_id} ${url}`)
 
         // await sleep(1000 * 1000)
         await page.deleteCookie({ name: 'bxf' })

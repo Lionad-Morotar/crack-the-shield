@@ -87,6 +87,7 @@ function createShopDetailTask(shop) {
   return {
     id: k,
     async run({ artifact }) {
+      const startTime = +new Date()
       let page
       try {
         page = artifact || (await getPage())
@@ -95,7 +96,6 @@ function createShopDetailTask(shop) {
         const data = { uid: '', name: '', hotline: '', mobile: '', owner: '', address: '' }
 
         const url = `${config.baseurl}${k}`
-        isProd || !isPageUsed && (await sleep(1000))
         await useRandomHeaders(page, {
           'spider': 'yiguang',
           referer: `${base.url}/`,
@@ -129,70 +129,75 @@ function createShopDetailTask(shop) {
 
         // 获取号主
         await page.hover('#view-owner')
-        const owner = await new Promise((resolve, reject) => {
-          const errTick = setTimeout(() => reject('WS超时'), 5 * 1000)
-          const options = {
-            reconnection: false,
-            timeout: 10000,
-            transports: ['websocket'],
-            extraHeaders: {
-              'spider': 'yiguang'
-            }
-          }
-          const ws = io(base.wss, options)
-          ws.on('connect', () => {
-            ws.emit('i-want-a-name', data.uid, owner => {
-              if (errTick) {
-                clearTimeout(errTick)
+        const owner = !isProd
+          ? 'test'
+          : await new Promise((resolve, reject) => {
+              const wsTimeout = 5 * 1000
+              const errTick = setTimeout(() => reject('WS超时'), wsTimeout)
+              const options = {
+                reconnection: false,
+                timeout: 10000,
+                transports: ['websocket'],
+                extraHeaders: {
+                  'spider': 'yiguang'
+                }
               }
-              resolve(owner)
+              const ws = io(base.wss, options)
+              ws.on('connect', () => {
+                ws.emit('i-want-a-name', data.uid, owner => {
+                  if (errTick) {
+                    clearTimeout(errTick)
+                  }
+                  resolve(owner)
+                })
+              })
+            }).then(data => {
+              return data
+            }).catch(error => {
+              throw new Error(error)
             })
-          })
-        }).then(data => {
-          return data
-        }).catch(error => {
-          throw new Error(error)
-        })
         data.owner = owner
 
         // 获取手机号
         const mobileLeft = await page.evaluate(() => document.querySelector('#phone-number').innerText.split('*')[0])
         const mobileRight = await page.evaluate(() => document.querySelector('#phone-number').innerText.split('****')[1])
-        const mobile = await new Promise((resolve, reject) => {
-          request({
-            url: `${base.url}/detail/${data.uid}/mobile`,
-            method: 'GET',
-            strictSSL: false,
-            followRedirect: false,
-            headers: {
-              'spider': 'yiguang',
-              cookie: 'bxf=11111111122222222133333333144444444'
-            }
-          }, (err, response) => {
-            if (err) {
-              log.error('获取手机号出错')
-              reject(err)
-            } else {
-              const decodeMobile = (base64) => {
-                let mobile = ''
-                const numStr = new Buffer(base64, 'base64').toString()
-                for (let i = 0; i < numStr.length; i++) {
-                  mobile += String.fromCharCode(
-                    numStr.charCodeAt(i) - 10
-                  )
+        const mobile = !isProd
+          ? `${mobileLeft}****${mobileRight}`
+          : await new Promise((resolve, reject) => {
+              request({
+                url: `${base.url}/detail/${data.uid}/mobile`,
+                method: 'GET',
+                strictSSL: false,
+                followRedirect: false,
+                headers: {
+                  'spider': 'yiguang',
+                  cookie: 'bxf=11111111122222222133333333144444444'
                 }
-                return mobile
-              }
-              const data = JSON.parse(response.body)
-              const mobile = decodeMobile(data.data)
-              resolve(mobile)
-            }
-          })
-        }).then(mobile => {
-          return mobile
-        }).catch(error => {
-          throw new Error(error)
-        })
+              }, (err, response) => {
+                if (err) {
+                  log.error('获取手机号出错')
+                  reject(err)
+                } else {
+                  const decodeMobile = (base64) => {
+                    let mobile = ''
+                    const numStr = new Buffer(base64, 'base64').toString()
+                    for (let i = 0; i < numStr.length; i++) {
+                      mobile += String.fromCharCode(
+                        numStr.charCodeAt(i) - 10
+                      )
+                    }
+                    return mobile
+                  }
+                  const data = JSON.parse(response.body)
+                  const mobile = decodeMobile(data.data)
+                  resolve(mobile)
+                }
+              })
+            }).then(mobile => {
+              return mobile
+            }).catch(error => {
+              throw new Error(error)
+            })
         if (!mobile.startsWith(mobileLeft) || !mobile.endsWith(mobileRight)) {
           log(`手机号获取错误：${mobile} VS ${mobileLeft}****${mobileRight}`)
           data.mobile = mobile
@@ -224,7 +229,7 @@ function createShopDetailTask(shop) {
           data.address = filterSpace(ocrRes.words_result[0].words)
           data.hotline = filterSpace(ocrRes.words_result[1].words)
         } catch (ocrError) {
-          log.error('ocrError:', ocrError)
+          log.error(ocrError)
           data.address = data.address || '-'
           data.hotline = data.hotline || '-'
         }
@@ -256,7 +261,8 @@ function createShopDetailTask(shop) {
           throw new Error(error)
         })
 
-        log(`DONE：NO.${idx} ${page._proxyType} ${JSON.stringify(data)} ${k}`)
+        const endTime = +new Date()
+        log(`DONE in ${endTime - startTime}ms：NO.${idx} ${page._proxyType} ${JSON.stringify(data)} ${k}`)
 
         // await sleep(1000 * 1000)
         await page.deleteCookie({ name: 'bxf' })
