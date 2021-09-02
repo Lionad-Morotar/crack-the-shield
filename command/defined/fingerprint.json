@@ -1,0 +1,9 @@
+{
+  "concurrent": 1,
+  "tasks": {
+    "name": "_fingerprint",
+    "url": "https://webbrowsertools.com/canvas-fingerprint/",
+    "snapshot": true,
+    "force": true
+  }
+}

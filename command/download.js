@@ -4,9 +4,9 @@ const { mkdir, conc, log, rimraf } = require('../utils')
 
 const outputDir = path.join(__dirname, `../dist/`)
 
-const mainTasks = require('../tasks/index.json')
-const testBot = require('../tasks/bot.json')
-const testFingerprint = require('../tasks/fingerprint.json')
+const mainTasks = require('../defined/index.json')
+const testBot = require('../defined/bot.json')
+const testFingerprint = require('../defined/fingerprint.json')
 const scrape = require('../src/scrape')
 const getSnapshot = require('../src/snapshot')
 
