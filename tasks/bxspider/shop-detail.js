@@ -6,7 +6,7 @@ const io = require('socket.io-client')
 const ocr = require('../../plugins/ocr')
 const connectDB = require('../../src/connect-db')
 const Tasker = require('../../src/tasker')
-const { getInstance, useProxy, useRandomHeaders, useCustomCSS, utils } = require('../../src/chrome')
+const { getInstance, useProxy, useRandomHeaders, useCustomCSS, useUA, utils } = require('../../src/chrome')
 
 const { isProd, autoRun, dir, sleep, filterSpace, log, runCount } = require('../../utils')
 const { findInCollection } = require('../../utils/db')
@@ -22,7 +22,8 @@ const config = isProd
     baseurl: `${base.url}/detail/`
   } : {
     dbname: 'spider-test',
-    baseurl: `${base.url}/detail/`
+    baseurl: 'http://192.168.1.7:9998/spider-detail?q='
+    // baseurl: `${base.url}/detail/`
   }
 
 let errorAccumulated = 0
@@ -45,7 +46,6 @@ const getPage = async () => {
   await page.evaluateOnNewDocument(waitUntilPropsLoaded)
   await page.evaluateOnNewDocument(styles)
   await page.setViewport(utils.setViewport())
-  await useRandomUA(page)
   await page.setRequestInterception(true)
   await useProxy(page, req => {
     const url = req.url()
@@ -90,6 +90,7 @@ function createShopDetailTask(shop) {
       let page
       try {
         page = artifact || (await getPage())
+        await useUA(page, shop.ua)
         const isPageUsed = page === artifact
         const data = { uid: '', name: '', hotline: '', mobile: '', owner: '', address: '' }
 
@@ -272,17 +273,15 @@ function createShopDetailTask(shop) {
 
         log.error(err.message)
         this.addTask(createShopDetailTask(shop))
-        // await sleep(1000 * 1000)
+        !isProd && await sleep(1000 * 1000)
         page && page.close && (await page.close())
-
-        /* 短时间内出错次数太多则重启 */
-        let score
+        let errScore
         if (err.message.match(/WS超时/)) {
-          score = 20
+          errScore = 20
         } else {
-          score = 5
+          errScore = 5
         }
-        errorAcc(score)
+        errorAcc(errScore)
 
       }
     }
@@ -304,7 +303,7 @@ connectDB().then(async mongo => {
     log(`剩余${todos.length}个详情页任务`)
 
     const taskConf = {
-      maxConcurrenceCount: 20,
+      maxConcurrenceCount: 1,
       interval: () => Math.random() * 500 + 100,
     }
     return await new Tasker(taskConf)

@@ -221,7 +221,7 @@ function createShopListTask(shoplist) {
 
         log(`DONE：NO.${_id} ${url}`)
 
-        await sleep(1000 * 1000)
+        // await sleep(1000 * 1000)
         await page.deleteCookie({ name: 'bxf' })
         await page.evaluate(() => localStorage.clear())
         await page.close()
@@ -236,10 +236,8 @@ function createShopListTask(shoplist) {
 
         log.error(err.message)
         this.addTask(createShopListTask(shoplist))
-        // await sleep(1000 * 1000)
+        !isProd && await sleep(1000 * 1000)
         page && page.close && (await page.close())
-
-        /* 短时间内出错次数太多则重启 */
         errorAcc(1)
 
       }

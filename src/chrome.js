@@ -211,7 +211,11 @@ const useCustomCSS = async (page, cssContent) => {
   return page
 }
 
-// 使用随机 UA
+const useUA = async (page, ua) => {
+  await page.setUserAgent(ua)
+  page._ua = ua
+  return page
+}
 const useRandomUA = async (page, conf) => {
   const config = Object.assign({
     deviceCategory: "desktop",
@@ -344,6 +348,7 @@ module.exports = {
   useProxy,
   useRandomHeaders,
   useCustomCSS,
+  useUA,
   useRandomUA,
   /**
    * 帮助函数
