@@ -37,6 +37,7 @@ module.exports = async function antiSlider(page, config, retry) {
     )
 
     // 找到要滑到第几个滑块
+    // TODO 破解新的滑块
     let num
     if (config.useLocalSliderNum) {
       num = 1
@@ -46,7 +47,8 @@ module.exports = async function antiSlider(page, config, retry) {
       if (ocrRes && ocrRes.words_result_num >= 0) {
         num = ocrRes.words_result[0].words.split('')[0]
       } else {
-        throw new Error('没有找到滑块')
+        num = 2
+        log(`没有找到滑块，使用随机值: ${num}`)
       }
       log('移动至滑块：' + num)
     }
