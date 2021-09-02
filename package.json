@@ -10,8 +10,9 @@
     "kill": "taskkill /f /im chrome.exe",
     "statics": "http-server ./statics -p9999",
     "db": "mongod --dbpath D:\\@Github\\crack-the-shield\\mongo",
-    "spider-shoplist:test": "cross-env NODE_ENV=test pm2 start ./tasks/bxspider/shop-list.js",
-    "spider-shoplist:prod": "cross-env NODE_ENV=production pm2 start ./tasks/bxspider/shop-list.js",
+    "result": "node ./tasks/bxspider/get-result.js",
+    "spider-shoplist:test": "cross-env NODE_ENV=test node ./tasks/bxspider/index.js",
+    "spider-shoplist:prod": "cross-env NODE_ENV=production node ./tasks/bxspider/index.js",
     "spider-detail:test": "cross-env NODE_ENV=test pm2 start ./tasks/bxspider/shop-detail.js",
     "spider-detail:prod": "cross-env NODE_ENV=production pm2 start ./tasks/bxspider/shop-detail.js"
   },
@@ -20,6 +21,7 @@
   "dependencies": {
     "baidu-aip-sdk": "^4.15.4",
     "crypto": "^1.0.1",
+    "iconv-lite": "^0.6.3",
     "lodash": "^4.17.21",
     "mongodb": "^4.1.1",
     "puppeteer": "^8.0.0",
