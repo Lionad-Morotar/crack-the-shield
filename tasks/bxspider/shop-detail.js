@@ -317,7 +317,7 @@ connectDB().then(async mongo => {
     log(`剩余${todos.length}个详情页任务`)
 
     const taskConf = {
-      maxConcurrenceCount: 5,
+      maxConcurrenceCount: 1,
       interval: () => Math.random() * 500 + 100,
     }
     return await new Tasker(taskConf)

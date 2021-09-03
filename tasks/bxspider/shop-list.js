@@ -275,7 +275,7 @@ connectDB().then(async mongo => {
     log(`START FROM SHOP NO.${todos[0].id}`)
   
     const taskConf = {
-      maxConcurrenceCount: 5,
+      maxConcurrenceCount: 1,
       interval: () => Math.random() * 500 + 100,
     }
     await new Tasker(taskConf)

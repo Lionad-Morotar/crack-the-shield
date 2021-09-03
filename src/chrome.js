@@ -15,7 +15,7 @@ const { getRandomHeaders } = require('./random-headers')
 
 // const USE_PROXY = ''
 const PROXE_TYPES_RATIO = {
-  'XDAILI': 0,
+  'XDAILI': 10,
   'DAILIYUN': 0
 }
 const PROXE_TYPES = Object.entries(PROXE_TYPES_RATIO).reduce((h, [k, v]) => {
@@ -41,8 +41,9 @@ const createInstance = async (conf) => {
   const antiCanvasFPExtPath = path.join(__dirname, '../extension/anti-canvas-fp')
   try {
     browser = await puppeteer.launch({
+      headless: false,
       // headless: true,
-      headless: isProd,
+      // headless: isProd,
       ignoreHTTPSErrors: true,
       // devtools: false,
       devtools: !isProd,
@@ -126,7 +127,7 @@ async function getInstance (conf) {
 }
 
 // 默认打开一些实例
-const defaultInstanceCount = 5
+const defaultInstanceCount = 1
 !(async () => {
   await Promise.all(
     Array(defaultInstanceCount)
