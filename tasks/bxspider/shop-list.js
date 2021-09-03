@@ -16,10 +16,10 @@ const config = isProd
     dbname: 'spider',
     baseurl: `${base.url}`
   } : {
-    dbname: 'spider-test',
+    dbname: 'spider',
     sliderNum: 2,
-    baseurl: 'http://192.168.1.7:9998/spider-list/'
-    // baseurl: `${base.url}`
+    // baseurl: 'http://192.168.1.7:9998/spider-list/'
+    baseurl: `${base.url}`
     // baseurl: 'http://192.168.1.7:9998/spider-detail/'
     // baseurl: 'http://192.168.1.7:9998/spider-slider/'
   }
@@ -124,13 +124,13 @@ function createShopListTask(shoplist) {
         })
 
         // 找到下一页
-        const nextParams = await page.evaluate(() => {
-          const $next = document.querySelector('.go-page.next')
-          return $next && $next.getAttribute('href')
-        })
-        const nextPage = nextParams
-          ? config.baseurl + nextParams
-          : null
+        // const nextParams = await page.evaluate(() => {
+        //   const $next = document.querySelector('.go-page.next')
+        //   return $next && $next.getAttribute('href')
+        // })
+        // const nextPage = nextParams
+        //   ? config.baseurl + nextParams
+        //   : null
 
         // 储存店铺数据
         await Promise.all(
@@ -184,7 +184,7 @@ function createShopListTask(shoplist) {
             const data = {
               _id,
               url,
-              next: nextPage,
+              // next: nextPage,
               shops,
               version: runCount,
               done: true
@@ -194,27 +194,28 @@ function createShopListTask(shoplist) {
                 log('储存列表页数据错误')
                 reject(err)
               } else {
-                if (nextPage) {
-                  shopListCollection.deleteMany({ _id: _id + 1 }, err => {
-                    if (err) {
-                      log('保存前删除列表页面数据错误')
-                      reject(err)
-                    }
-                    const nextTask = {
-                      _id: _id + 1,
-                      url: nextPage,
-                      done: false
-                    }
-                    shopListCollection.insertOne(nextTask, err => {
-                      if (err) {
-                        log('储存列表页数据错误')
-                        reject(err)
-                      }
-                      this.addTask(createShopListTask(nextTask))
-                      resolve()
-                    })
-                  })
-                }
+                resolve()
+                // if (nextPage) {
+                  // shopListCollection.deleteMany({ _id: _id + 1 }, err => {
+                  //   if (err) {
+                  //     log('保存前删除列表页面数据错误')
+                  //     reject(err)
+                  //   }
+                  //   const nextTask = {
+                  //     _id: _id + 1,
+                  //     // url: nextPage,
+                  //     done: false
+                  //   }
+                  //   shopListCollection.insertOne(nextTask, err => {
+                  //     if (err) {
+                  //       log('储存列表页数据错误')
+                  //       reject(err)
+                  //     }
+                  //     this.addTask(createShopListTask(nextTask))
+                  //     resolve()
+                  //   })
+                  // })
+                // }
               }
             })
           })
@@ -238,10 +239,10 @@ function createShopListTask(shoplist) {
 
       } catch (err) {
 
-        !isProd && (
-          console.error(err),
-          await sleep(1000 * 1000)
-        )
+        // !isProd && (
+        //   console.error(err),
+        //   await sleep(1000 * 1000)
+        // )
         log.error(err.message)
         this.addTask(createShopListTask(shoplist))
         page && (await page.close())
@@ -262,17 +263,21 @@ connectDB().then(async mongo => {
   shopCollection = db.collection('shops')
   shopListCollection = db.collection('shop-list')
 
-  if (!isProd) {
-    await dropCollection(shopListCollection)
-    await dropCollection(shopCollection)
-  }
+  // if (!isProd) {
+  //   await dropCollection(shopListCollection)
+  //   await dropCollection(shopCollection)
+  // }
 
   const runShopListTasks = async () => {
-    let nextTask = 
-      (await findInCollection(shopListCollection, { done: false }))[0] ||
-      ({ _id: 1, url: config.baseurl, done: false })
-    const todos = [nextTask].map(x => createShopListTask(x))
-    log(`START FROM SHOP NO.${todos[0].id}`)
+    // let nextTask = 
+    //   (await findInCollection(shopListCollection, { done: false }))[0] ||
+    //   ({ _id: 1, url: config.baseurl, done: false })
+    // const todos = [nextTask].map(x => createShopListTask(x))
+    // log(`START FROM SHOP NO.${todos[0].id}`)
+
+    const finds = await findInCollection(shopListCollection)
+    const todos = finds.filter(x => !x.done).map(x => createShopListTask(x))
+    log(`剩余${todos.length}个列表页任务`)
   
     const taskConf = {
       maxConcurrenceCount: 1,
