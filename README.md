@@ -8,9 +8,3 @@
 
 <p style="text-align: center; font-size: 12px;">连鸡不得进，饮马空夷犹</p>
 <p style="text-align: center; font-size: 12px;">安得羿善射，一箭落旄头</p>
-
-## 开发环境
-
-## 技术决策
-
-## 注意事项
