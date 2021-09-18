@@ -15,12 +15,12 @@ const styles = () => {
 const waitUntilLoaded = function () {
   const fn = ($elm, timeout = 300) => {
     let tick
-    const target = typeof $elm === 'string'
-      ? document.querySelector($elm)
-      : $elm
+    const targets = typeof $elm === 'string'
+      ? [...document.querySelectorAll($elm)]
+      : $elm instanceof Array ? $elm : [$elm]
     return new Promise((resolve, reject) => {
-      if (!target) {
-        console.log('跳过等待')
+      if (targets.length === 0) {
+        console.log("跳过等待")
         resolve()
       }
       // 超时报错
@@ -42,9 +42,11 @@ const waitUntilLoaded = function () {
           resolve()
         }, timeout)
       })
-      observer.observe(target, {
-        childList: true,
-        subtree: true
+      targets.map(target => {
+        observer.observe(target, {
+          childList: true,
+          subtree: true
+        })
       })
     })
   }
