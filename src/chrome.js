@@ -45,17 +45,20 @@ const createInstance = async (conf) => {
       // headless: true,
       // headless: isProd,
       ignoreHTTPSErrors: true,
+      // devtools: true,
       devtools: false,
       // devtools: !isProd,
       // executablePath: 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
       args: [
         ...MINARGS,
-        ...(PROXE_TYPES.filter(x => x).length === 0 ? [] : [
-          `--disable-extensions-except=${antiCanvasFPExtPath}`,
-          `--load-extension=${antiCanvasFPExtPath}`
-        ])
+        ...(PROXE_TYPES.filter((x) => x).length === 0
+          ? []
+          : [
+              // `--disable-extensions-except=${antiCanvasFPExtPath}`,
+              // `--load-extension=${antiCanvasFPExtPath}`
+            ]),
       ],
-    })
+    });
     /* 存入池中 */
     debugPort = await browser.wsEndpoint()
     const instance = {
