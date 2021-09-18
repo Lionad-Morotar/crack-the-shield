@@ -178,13 +178,13 @@ const useRandomHeaders = async (page, baseHeaders, seed) => {
 
 // 使用自定义 CSS
 const useCustomCSS = async (page, cssContent) => {
-  await page.evaluateOnNewDocument(async () => {
+  await page.evaluateOnNewDocument(async cssContent => {
     document.addEventListener('DOMContentLoaded', () => {
       const $style = document.createElement('style')
       $style.innerHTML = cssContent
       document.querySelector('head').appendChild($style)
     })
-  })
+  }, cssContent)
   return page
 }
 
