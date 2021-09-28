@@ -45,17 +45,20 @@ const createInstance = async (conf) => {
       // headless: true,
       // headless: isProd,
       ignoreHTTPSErrors: true,
-      // devtools: false,
-      devtools: !isProd,
+      // devtools: true,
+      devtools: false,
+      // devtools: !isProd,
       // executablePath: 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
       args: [
         ...MINARGS,
-        ...(PROXE_TYPES.filter(x => x).length === 0 ? [] : [
-          `--disable-extensions-except=${antiCanvasFPExtPath}`,
-          `--load-extension=${antiCanvasFPExtPath}`
-        ])
+        ...(PROXE_TYPES.filter((x) => x).length === 0
+          ? []
+          : [
+              // `--disable-extensions-except=${antiCanvasFPExtPath}`,
+              // `--load-extension=${antiCanvasFPExtPath}`
+            ]),
       ],
-    })
+    });
     /* 存入池中 */
     debugPort = await browser.wsEndpoint()
     const instance = {
@@ -65,7 +68,6 @@ const createInstance = async (conf) => {
       useTimes: 0,
       port: debugPort,
       isBusy () {
-        // console.log(`${this.id} tabs num: ${this.tabs}`)
         return this.status === 'reopen'
           ? true
           : maxTabs
@@ -81,20 +83,32 @@ const createInstance = async (conf) => {
   }
 }
 
+// 默认打开一些实例
+const defaultInstanceCount = 1
+let openDefaultInstanceTask
+openDefaultInstanceTask = Promise.all(
+  Array(defaultInstanceCount)
+    .fill('')
+    .map(async _ => await getInstance())
+)
+
 // 优先从实例池中获取浏览器
 async function getInstance (conf) {
   const { maxTabs = 3, useNew = false } = Object.assign(conf || {})
   let instance = null
   let chrome = null
+  if (openDefaultInstanceTask) {
+    await Promise.all([openDefaultInstanceTask])
+  }
   try {
-    const noBusyInstance = _.shuffle(BROWSER_POOL).find(x => {
+    const leisureInstance = _.shuffle(BROWSER_POOL).find(x => {
       return x.isBusy && !x.isBusy()
     })
-    if (noBusyInstance) {
-      instance = noBusyInstance
+    if (leisureInstance) {
+      instance = leisureInstance
       // https://github.com/puppeteer/puppeteer/issues/5401
       chrome = await puppeteer.connect({
-        browserWSEndpoint: noBusyInstance.port
+        browserWSEndpoint: leisureInstance.port
       })
     } else {
       instance = await createInstance({ maxTabs })
@@ -125,16 +139,6 @@ async function getInstance (conf) {
 
   return chrome
 }
-
-// 默认打开一些实例
-const defaultInstanceCount = 1
-!(async () => {
-  await Promise.all(
-    Array(defaultInstanceCount)
-      .fill('')
-      .map(async x => await getInstance())
-  )
-})()
 
 // 退出命令行时关闭浏览器（防止内存泄漏）
 process.on('SIGINT', async function () {
@@ -177,7 +181,7 @@ const useRandomHeaders = async (page, baseHeaders, seed) => {
 
 // 使用自定义 CSS
 const useCustomCSS = async (page, cssContent) => {
-  await page.evaluateOnNewDocument(async (cssContent) => {
+  await page.evaluateOnNewDocument(async cssContent => {
     document.addEventListener('DOMContentLoaded', () => {
       const $style = document.createElement('style')
       $style.innerHTML = cssContent
